@@ -103,9 +103,9 @@ export const HeroFeatured: React.FC<HeroFeaturedProps> = ({ article }) => {
         </div>
 
         {/* Bottom: Title, Brief, Cursive Signature & Stats */}
-        <div className="relative z-10 mt-auto pt-8 max-w-4xl text-right">
+        <div className="relative z-10 mt-auto pt-6 sm:pt-8 max-w-4xl text-right">
           {/* Title: Greta Arabic Bold */}
-          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.18] tracking-tight">
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-white leading-[1.2] sm:leading-[1.18] tracking-tight break-words">
             <Link
               href={`/articles/${article.slug || article.id}`}
               className="hover:text-[#FACC15] transition-colors"
@@ -115,7 +115,7 @@ export const HeroFeatured: React.FC<HeroFeaturedProps> = ({ article }) => {
           </h2>
 
           {/* Brief */}
-          <p className="mt-3 sm:mt-4 text-white/95 text-base sm:text-xl leading-relaxed text-justify max-w-3xl font-light">
+          <p className="mt-3 sm:mt-4 text-white/95 text-sm sm:text-lg lg:text-xl leading-relaxed text-justify max-w-3xl font-light">
             <Link
               href={`/articles/${article.slug || article.id}`}
               className="hover:opacity-90 transition-opacity block"

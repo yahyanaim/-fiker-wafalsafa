@@ -86,7 +86,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, index = 0 }) 
   };
 
   return (
-    <div className="recommendation-item flex flex-col justify-between h-full w-full bg-white px-6 sm:px-8 lg:px-11 py-6 sm:py-7">
+    <div className="recommendation-item flex flex-col justify-between h-full w-full bg-white px-5 sm:px-8 lg:px-11 py-5 sm:py-7">
       {/* 1. Category Glyph Icon at Top-Right */}
       <div className="w-full flex items-center justify-start mb-2.5">
         {categorySlug && (
@@ -112,14 +112,14 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, index = 0 }) 
         title="الذهاب إلى المقال"
       >
         <div
-          className="post-img-container w-full aspect-square rounded-[26px] sm:rounded-[28px] flex items-center justify-center relative overflow-hidden transition-transform duration-300 group-hover:scale-[1.02] shadow-xs"
+          className="post-img-container w-full aspect-square rounded-[22px] sm:rounded-[28px] flex items-center justify-center relative overflow-hidden transition-transform duration-300 group-hover:scale-[1.02] shadow-xs"
           style={{ backgroundColor: cardColor }}
         >
           {postCover ? (
             <img
               src={postCover}
               alt={postTitle}
-              className="w-full h-full object-cover rounded-[26px] sm:rounded-[28px]"
+              className="w-full h-full object-cover rounded-[22px] sm:rounded-[28px]"
               loading="lazy"
             />
           ) : (
@@ -140,7 +140,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, index = 0 }) 
           title="الذهاب إلى المقال"
           className="w-full text-right group"
         >
-          <h3 className="post-title font-bold text-xl sm:text-[21px] text-[#0a1226] group-hover:text-[#D97706] leading-tight line-clamp-2 transition-colors">
+          <h3 className="post-title font-bold text-xl sm:text-[21px] text-[#0a1226] group-hover:text-[#D97706] leading-tight line-clamp-2 transition-colors break-words">
             {postTitle}
           </h3>
         </Link>

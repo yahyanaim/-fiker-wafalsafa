@@ -23,21 +23,21 @@ export const CategoryBar: React.FC<CategoryBarProps> = ({
 
   return (
     <div className="w-full bg-transparent py-2 select-none">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
         {/* Six Category Icons: Science, Philosophy, Literature, Thoughts, Opinion, Religion */}
-        <ul className="flex items-center gap-3 sm:gap-4 py-1">
+        <ul className="flex items-center gap-2 sm:gap-4 py-1 max-w-full overflow-x-auto no-scrollbar justify-center">
           {categories.map((category) => {
             const isSelected = selectedCategory === category.slug;
 
             return (
-              <li key={category.id} className="relative flex flex-col items-center">
+              <li key={category.id} className="relative flex flex-col items-center shrink-0">
                 <button
                   onClick={() =>
                     onSelectCategory(isSelected ? 'all' : category.slug)
                   }
                   onMouseEnter={() => setHoveredCategory(category.slug)}
                   onMouseLeave={() => setHoveredCategory(null)}
-                  className={`flex flex-col items-center justify-center p-1.5 transition-all cursor-pointer group ${
+                  className={`flex flex-col items-center justify-center p-1 sm:p-1.5 transition-all cursor-pointer group ${
                     isSelected
                       ? 'opacity-100 scale-110 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]'
                       : 'opacity-70 hover:opacity-100'
@@ -47,9 +47,9 @@ export const CategoryBar: React.FC<CategoryBarProps> = ({
                   <CategoryIcon
                     name={category.name}
                     slug={category.slug}
-                    size={36}
+                    size={32}
                     onDark={true}
-                    className="transition-transform duration-200"
+                    className="sm:w-[36px] sm:h-[36px] transition-transform duration-200"
                   />
                   {/* Subtle Yellow Active Indicator */}
                   {isSelected && (

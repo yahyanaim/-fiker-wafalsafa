@@ -64,7 +64,7 @@ export default function HomePage() {
       <Header />
 
       {/* Top Section: Hero Teaser with Article Image Background */}
-      <section className="relative w-full bg-[#0a1226] text-white pt-0 border-b border-[#1e293b] overflow-hidden min-h-[560px] md:min-h-[640px]">
+      <section className="relative w-full bg-[#0a1226] text-white pt-0 border-b border-[#1e293b] overflow-hidden min-h-[500px] sm:min-h-[560px] md:min-h-[640px]">
         {/* Article Cover Image Background extending under the blurry navbar */}
         {topTeaser && topTeaser.cover && (
           <div
@@ -88,9 +88,9 @@ export default function HomePage() {
 
           {/* Top Teaser Note (Exact giant typography with Yellow accents) */}
           {topTeaser && (
-            <div className="mt-8 sm:mt-12 pb-8 sm:pb-12 border-t border-[#1e293b]/80 pt-8 sm:pt-10">
+            <div className="mt-6 sm:mt-12 pb-6 sm:pb-12 border-t border-[#1e293b]/80 pt-6 sm:pt-10">
               {/* Giant Title: Greta Arabic Bold */}
-              <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-[105px] font-bold text-white leading-[1.08] tracking-tight text-right">
+              <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-[95px] xl:text-[105px] font-bold text-white leading-[1.15] sm:leading-[1.08] tracking-tight text-right break-words">
                 <Link
                   href={`/articles/${topTeaser.slug || topTeaser.id}`}
                   title="الذهاب إلى المقال"
@@ -101,7 +101,7 @@ export default function HomePage() {
               </h1>
 
               {/* Excerpt: Greta Arabic Regular */}
-              <p className="mt-6 sm:mt-8 text-lg sm:text-2xl lg:text-[26px] text-white/95 leading-relaxed text-justify max-w-3xl font-light">
+              <p className="mt-4 sm:mt-8 text-base sm:text-xl lg:text-[26px] text-white/95 leading-relaxed text-justify max-w-3xl font-light">
                 <Link
                   href={`/articles/${topTeaser.slug || topTeaser.id}`}
                   title="الذهاب إلى المقال"

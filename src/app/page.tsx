@@ -167,17 +167,19 @@ export default function HomePage() {
       <main className="flex-1 w-full bg-white">
         {activeSections.map((section, sectionIdx) => (
           <div key={section.categorySlug} className="w-full">
-            {/* 3x3 Newspaper Grid (9 Cards with Colorful Artwork matching 101note) */}
-            <div className="max-w-[1260px] mx-auto border-r border-black border-t border-black">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {section.posts.map((post, postIdx) => (
-                  <div
-                    key={post.id || `${section.categorySlug}-${postIdx}`}
-                    className="border-l border-b border-black flex flex-col justify-between"
-                  >
-                    <ArticleCard article={post} index={sectionIdx * 9 + postIdx} />
-                  </div>
-                ))}
+            {/* 3x3 Newspaper Grid with spacing separating borders from hero & middle sections */}
+            <div className="py-8 sm:py-10 md:py-12 lg:py-14 px-4 sm:px-6 lg:px-8">
+              <div className="max-w-[1260px] mx-auto border-r border-black border-t border-black">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                  {section.posts.map((post, postIdx) => (
+                    <div
+                      key={post.id || `${section.categorySlug}-${postIdx}`}
+                      className="border-l border-b border-black flex flex-col justify-between"
+                    >
+                      <ArticleCard article={post} index={sectionIdx * 9 + postIdx} />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 

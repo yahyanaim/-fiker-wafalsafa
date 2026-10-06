@@ -90,7 +90,7 @@ export default function AuthorProfilePage({ params }: PageProps) {
       </section>
 
       {/* Author's Articles in 3-Column Grid */}
-      <main className="flex-1 w-full bg-white">
+      <main className="flex-1 w-full bg-white py-8 sm:py-10 md:py-12 lg:py-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1260px] mx-auto border-r border-[#0a1226] border-t border-[#0a1226]">
           {authorArticles.length === 0 ? (
             <div className="py-20 text-center text-neutral-500">

@@ -78,7 +78,7 @@ export default function CategoryPage({ params }: PageProps) {
       </section>
 
       {/* Main Articles List in 101n 3-Column Newspaper Grid */}
-      <main className="flex-1 w-full bg-white">
+      <main className="flex-1 w-full bg-white py-8 sm:py-10 md:py-12 lg:py-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1260px] mx-auto border-r border-black border-t border-black">
           {categoryArticles.length === 0 ? (
             <div className="text-center py-24 text-neutral-500">

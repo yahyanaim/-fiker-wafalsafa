@@ -11,6 +11,8 @@ import { CategoryIcon } from '@/components/CategoryIcon';
 import { ArticleBodyRenderer } from '@/components/ArticleBodyRenderer';
 import { ArticleCard } from '@/components/ArticleCard';
 import { formatWordCountBadge } from '@/utils/arabic';
+import { QuoteCardShareModal } from '@/components/QuoteCardShareModal';
+import { Sparkles, Image as ImageIcon } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -24,6 +26,7 @@ export default function ArticlePage({ params }: PageProps) {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -178,6 +181,15 @@ export default function ArticlePage({ params }: PageProps) {
 
             <div className="side-btns article-body flex items-center gap-3">
               <button
+                onClick={() => setIsQuoteModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0a1226] text-[#FACC15] hover:bg-[#152347] hover:scale-105 text-xs font-bold transition-all shadow-sm cursor-pointer"
+                title="معاينة وتصميم بطاقة الاقتباس مع صورة المقال للمشاركة"
+              >
+                <Sparkles size={13} />
+                <span>بطاقة الاقتباس والصورة</span>
+              </button>
+
+              <button
                 onClick={handleShare}
                 className="share-btn light article-body p-1 hover:opacity-60 transition-opacity cursor-pointer relative text-black"
                 title="مشاركة المقال"
@@ -310,10 +322,35 @@ export default function ArticlePage({ params }: PageProps) {
                   </a>
                 </li>
               </ul>
+
+              {/* Quote & Photo Social Preview Card Banner */}
+              <div className="mt-5 p-4 rounded-xl bg-gradient-to-r from-[#0a1226]/8 to-[#0a1226]/3 border border-[#0a1226]/15 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-3 text-right">
+                  <div className="w-10 h-10 rounded-full bg-[#0a1226] text-[#FACC15] flex items-center justify-center shrink-0">
+                    <Sparkles size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-[#0a1226]">
+                      معاينة بطاقة الاقتباس والصورة للمشاركة
+                    </h4>
+                    <p className="text-[11px] text-neutral-500">
+                      صمم بطاقة أنيقة بالصورة واقتباس المقال وحملها كصورة (PNG) للإنستجرام وتويتر
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsQuoteModalOpen(true)}
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#0a1226] hover:bg-[#152347] text-[#FACC15] text-xs font-bold transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                >
+                  فتح بطاقة الاقتباس
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Author Spotlight Box: Yahia Naim with his photo */}
+          {/* Author Spotlight Box: Yahia Naim with his photo & Social Accounts */}
           <div className="mt-12 p-6 sm:p-8 rounded-2xl bg-[#0a1226]/5 border border-[#0a1226]/15 flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-right">
             <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-[#FACC15] shrink-0 bg-neutral-100 shadow-md">
               <Image
@@ -340,6 +377,75 @@ export default function ArticlePage({ params }: PageProps) {
               <p className="text-sm text-neutral-700 leading-relaxed font-light text-justify">
                 {author.bio}
               </p>
+
+              {/* Yahia Naim's Social Media Accounts */}
+              <div className="mt-4 pt-4 border-t border-[#0a1226]/10 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <span className="text-xs font-bold text-[#0a1226] ml-1">
+                  تواصل مع الكاتب:
+                </span>
+                <a
+                  href="https://x.com/yahia_naim"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-neutral-300 text-xs text-[#0a1226] hover:border-[#FACC15] hover:text-[#D97706] transition-colors"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                  <span>إكس</span>
+                </a>
+                <a
+                  href="https://instagram.com/yahia_naim"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-neutral-300 text-xs text-[#0a1226] hover:border-[#FACC15] hover:text-[#D97706] transition-colors"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect width="20" height="20" x="2" y="2" rx="5" />
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                  </svg>
+                  <span>إنستجرام</span>
+                </a>
+                <a
+                  href="https://facebook.com/yahia.naim"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-neutral-300 text-xs text-[#0a1226] hover:border-[#FACC15] hover:text-[#D97706] transition-colors"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                  </svg>
+                  <span>فيسبوك</span>
+                </a>
+                <a
+                  href="https://linkedin.com/in/yahyanaim"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-neutral-300 text-xs text-[#0a1226] hover:border-[#FACC15] hover:text-[#D97706] transition-colors"
+                >
+                  <span className="font-bold text-[10px]">in</span>
+                  <span>لينكد إن</span>
+                </a>
+                <a
+                  href="https://github.com/yahyanaim"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-neutral-300 text-xs text-[#0a1226] hover:border-[#FACC15] hover:text-[#D97706] transition-colors"
+                >
+                  <span>جيت هب</span>
+                </a>
+                <a
+                  href="mailto:yahyanaim2001@gmail.com"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-neutral-300 text-xs text-[#0a1226] hover:border-[#FACC15] hover:text-[#D97706] transition-colors"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect width="20" height="16" x="2" y="4" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                  <span>البريد</span>
+                </a>
+              </div>
             </div>
           </div>
         </section>
@@ -362,6 +468,16 @@ export default function ArticlePage({ params }: PageProps) {
           </section>
         )}
       </main>
+
+      {/* Quote Card Share Modal */}
+      {article && (
+        <QuoteCardShareModal
+          article={article}
+          isOpen={isQuoteModalOpen}
+          onClose={() => setIsQuoteModalOpen(false)}
+          shareUrl={shareUrl}
+        />
+      )}
 
       {/* 101n Footer */}
       <Footer />

@@ -21,6 +21,10 @@ export interface Author {
   location?: string;
   articlesCount?: number;
   twitter?: string;
+  instagram?: string;
+  facebook?: string;
+  linkedin?: string;
+  github?: string;
   email?: string;
 }
 

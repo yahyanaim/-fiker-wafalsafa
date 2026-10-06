@@ -10,8 +10,12 @@ export const authors: Author[] = [
     avatar: '/authors/yahia-naim.jpg',
     location: 'فكر وفلسفة',
     articlesCount: 61,
-    twitter: '@yahia_naim',
-    email: 'yahyanaim2001@gmail.com',
+    twitter: 'https://x.com/yahia_naim',
+    instagram: 'https://instagram.com/yahia_naim',
+    facebook: 'https://facebook.com/yahia.naim',
+    linkedin: 'https://linkedin.com/in/yahyanaim',
+    github: 'https://github.com/yahyanaim',
+    email: 'mailto:yahyanaim2001@gmail.com',
   },
 ];
 

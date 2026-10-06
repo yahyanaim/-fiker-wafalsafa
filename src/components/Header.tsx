@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NewsletterModal } from './NewsletterModal';
@@ -13,12 +13,26 @@ export const Header: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const [showAdminLink, setShowAdminLink] = useState(false);
+
+  useEffect(() => {
+    // Check if on Yahia's Mac / authorized device
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local');
+      const hasToken = localStorage.getItem('fiker_authorized_mac_device') === 'authorized_mac_yahia_2026' ||
+                        localStorage.getItem('fiker_authorized_mac_device') === 'authorized_mac_yahia';
+      if (isLocal || hasToken) {
+        setShowAdminLink(true);
+      }
+    }
+  }, []);
 
   const navLinks = [
     { href: '/', label: 'الرئيسية', icon: Compass },
     { href: '/#categories-section', label: 'محطات اليوم', icon: Clock },
     { href: '/authors', label: 'الكُتّاب', icon: Users },
-    { href: '/admin', label: 'لوحة الإدارة', icon: ShieldCheck },
+    ...(showAdminLink ? [{ href: '/admin', label: 'لوحة الإدارة (Mac)', icon: ShieldCheck }] : []),
   ];
 
   return (

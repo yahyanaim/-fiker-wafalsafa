@@ -36,8 +36,15 @@ import {
   ImageIcon,
   Link2,
   X,
-  Loader2
+  Loader2,
+  Laptop,
+  Globe,
+  Share2,
+  Copy,
+  Key
 } from 'lucide-react';
+import { isUserMacAuthorized, MAC_AUTH_KEY, MAC_AUTH_SECRET_TOKEN, MAC_UNLOCK_PARAM } from '@/utils/macAuth';
+import { NotFoundView } from '@/components/NotFoundView';
 
 const COVER_PRESETS = [
   {
@@ -78,16 +85,43 @@ export default function AdminPage() {
     toggleArticlePublish,
   } = useArticles();
 
+  // Mac Device Authorization State (Restricted to Yahia's Mac only)
+  const [isMacAuthorized, setIsMacAuthorized] = useState<boolean | null>(null);
+
   // Authentication State (Admin Only Gate)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [passcode, setPasscode] = useState('');
   const [authError, setAuthError] = useState(false);
 
+  // Yahia Naim Social Media Links State
+  const [socialLinks, setSocialLinks] = useState({
+    twitter: 'https://x.com/yahia_naim',
+    instagram: 'https://instagram.com/yahia_naim',
+    facebook: 'https://facebook.com/yahia.naim',
+    linkedin: 'https://linkedin.com/in/yahyanaim',
+    github: 'https://github.com/yahyanaim',
+    email: 'yahyanaim2001@gmail.com',
+  });
+
   useEffect(() => {
-    // Check session
+    // 1. Verify if device is Yahia's Mac or authorized
+    const isAuthorized = isUserMacAuthorized();
+    setIsMacAuthorized(isAuthorized);
+
+    // 2. Check login session
     const authStatus = localStorage.getItem('fiker_admin_authenticated');
     if (authStatus === 'true') {
       setIsAuthenticated(true);
+    }
+
+    // 3. Load saved social links
+    try {
+      const saved = localStorage.getItem('fiker_yahia_social_links');
+      if (saved) {
+        setSocialLinks(JSON.parse(saved));
+      }
+    } catch {
+      // ignore
     }
   }, []);
 
@@ -109,7 +143,17 @@ export default function AdminPage() {
     localStorage.removeItem('fiker_admin_authenticated');
   };
 
-  const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'newsletter'>('manage');
+  const handleSaveSocialLinks = (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      localStorage.setItem('fiker_yahia_social_links', JSON.stringify(socialLinks));
+      showToast('تم حفظ وتحديث روابط التواصل الاجتماعي بنجاح!');
+    } catch {
+      showToast('حدث خطأ أثناء حفظ الروابط');
+    }
+  };
+
+  const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'newsletter' | 'social'>('manage');
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
 
   // Form State - Sole Admin Editor (Yahia Naim)
@@ -356,7 +400,21 @@ export default function AdminPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // If not authenticated, show the Admin Gate (Not open to public)
+  // 1. First Gate: If NOT on user's authorized Mac, completely hide the admin page and show authentic 404
+  if (isMacAuthorized === false) {
+    return <NotFoundView />;
+  }
+
+  // Still checking Mac authorization status
+  if (isMacAuthorized === null) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-neutral-300 border-t-[#0a1226] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // 2. Second Gate: If on user's Mac but not authenticated in session, show passcode login
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex flex-col bg-white text-black">
@@ -454,6 +512,37 @@ export default function AdminPage() {
             </div>
           </div>
 
+          {/* Mac Protection Status Banner */}
+          <div className="mb-6 p-4 rounded-xl bg-[#0a1226] text-white border border-[#FACC15]/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-[#FACC15]/20 text-[#FACC15] flex items-center justify-center shrink-0 border border-[#FACC15]/40">
+                <Laptop size={18} />
+              </div>
+              <div>
+                <span className="font-bold text-[#FACC15] text-sm block">
+                  وصول حصري لجهاز Mac الخاص بك (يحيى نعيم)
+                </span>
+                <span className="text-white/70 block text-xs mt-0.5">
+                  لوحة التحكم هذه محجوبة ومخفية تماماً عن باقي زوار الإنترنت وتظهر لهم كصفحة 404 غير موجودة.
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                const unlockUrl = `${origin}/admin?mac_key=yahia_mac_secure_2026`;
+                navigator.clipboard.writeText(unlockUrl);
+                showToast('تم نسخ رابط الترخيص السري لجهاز الماك!');
+              }}
+              className="px-3.5 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-[#FACC15] border border-[#FACC15]/40 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+              title="نسخ الرابط مع مفتاح الماك السري لفتحه على أي متصفح في جهازك"
+            >
+              <Copy size={13} />
+              <span>نسخ رابط ترخيص الماك</span>
+            </button>
+          </div>
+
           {/* Navigation Tabs */}
           <div className="flex items-center gap-2 mb-8 border-b border-neutral-200">
             <button
@@ -490,6 +579,17 @@ export default function AdminPage() {
               }`}
             >
               المشتركون ({newsletterSubscribers.length})
+            </button>
+
+            <button
+              onClick={() => setActiveTab('social')}
+              className={`pb-3 px-4 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer ${
+                activeTab === 'social'
+                  ? 'border-[#0a1226] text-[#0a1226]'
+                  : 'border-transparent text-neutral-500 hover:text-black'
+              }`}
+            >
+              حسابات التواصل والجهاز
             </button>
           </div>
 
@@ -1085,6 +1185,221 @@ export default function AdminPage() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB 4: Social Media & Mac Settings */}
+          {activeTab === 'social' && (
+            <div className="space-y-8">
+              {/* Card 1: Social Media Accounts */}
+              <div className="bg-white border border-neutral-300 p-6 sm:p-8">
+                <div className="flex items-center justify-between pb-4 mb-6 border-b border-neutral-200">
+                  <div>
+                    <h2 className="text-lg sm:text-xl font-bold text-black font-serif">
+                      حسابات التواصل الاجتماعي للكاتب (يحيى نعيم)
+                    </h2>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      تظهر هذه الحسابات في تذييل الموقع (Footer)، وبطاقات مشاركة الاقتباسات، وصفحة الكاتب.
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-[#0a1226] text-[#FACC15] flex items-center justify-center">
+                    <Share2 size={20} />
+                  </div>
+                </div>
+
+                <form onSubmit={handleSaveSocialLinks} className="space-y-4 max-w-2xl">
+                  {/* Twitter / X */}
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 mb-1">
+                      حساب إكس (Twitter / X)
+                    </label>
+                    <div className="flex items-center border border-neutral-300 bg-neutral-50 focus-within:border-black">
+                      <span className="px-3 text-xs text-neutral-500 border-l border-neutral-200 bg-neutral-100 py-2.5">
+                        𝕏
+                      </span>
+                      <input
+                        type="url"
+                        dir="ltr"
+                        value={socialLinks.twitter}
+                        onChange={(e) => setSocialLinks({ ...socialLinks, twitter: e.target.value })}
+                        className="flex-1 px-3 py-2 text-xs bg-transparent text-black focus:outline-none"
+                        placeholder="https://x.com/yahia_naim"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Instagram */}
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 mb-1">
+                      حساب إنستجرام (Instagram)
+                    </label>
+                    <div className="flex items-center border border-neutral-300 bg-neutral-50 focus-within:border-black">
+                      <span className="px-3 text-xs text-neutral-500 border-l border-neutral-200 bg-neutral-100 py-2.5">
+                        IG
+                      </span>
+                      <input
+                        type="url"
+                        dir="ltr"
+                        value={socialLinks.instagram}
+                        onChange={(e) => setSocialLinks({ ...socialLinks, instagram: e.target.value })}
+                        className="flex-1 px-3 py-2 text-xs bg-transparent text-black focus:outline-none"
+                        placeholder="https://instagram.com/yahia_naim"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Facebook */}
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 mb-1">
+                      حساب فيسبوك (Facebook)
+                    </label>
+                    <div className="flex items-center border border-neutral-300 bg-neutral-50 focus-within:border-black">
+                      <span className="px-3 text-xs text-neutral-500 border-l border-neutral-200 bg-neutral-100 py-2.5">
+                        FB
+                      </span>
+                      <input
+                        type="url"
+                        dir="ltr"
+                        value={socialLinks.facebook}
+                        onChange={(e) => setSocialLinks({ ...socialLinks, facebook: e.target.value })}
+                        className="flex-1 px-3 py-2 text-xs bg-transparent text-black focus:outline-none"
+                        placeholder="https://facebook.com/yahia.naim"
+                      />
+                    </div>
+                  </div>
+
+                  {/* LinkedIn */}
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 mb-1">
+                      حساب لينكد إن (LinkedIn)
+                    </label>
+                    <div className="flex items-center border border-neutral-300 bg-neutral-50 focus-within:border-black">
+                      <span className="px-3 text-xs text-neutral-500 border-l border-neutral-200 bg-neutral-100 py-2.5">
+                        in
+                      </span>
+                      <input
+                        type="url"
+                        dir="ltr"
+                        value={socialLinks.linkedin}
+                        onChange={(e) => setSocialLinks({ ...socialLinks, linkedin: e.target.value })}
+                        className="flex-1 px-3 py-2 text-xs bg-transparent text-black focus:outline-none"
+                        placeholder="https://linkedin.com/in/yahyanaim"
+                      />
+                    </div>
+                  </div>
+
+                  {/* GitHub */}
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 mb-1">
+                      حساب جيت هب (GitHub)
+                    </label>
+                    <div className="flex items-center border border-neutral-300 bg-neutral-50 focus-within:border-black">
+                      <span className="px-3 text-xs text-neutral-500 border-l border-neutral-200 bg-neutral-100 py-2.5">
+                        GH
+                      </span>
+                      <input
+                        type="url"
+                        dir="ltr"
+                        value={socialLinks.github}
+                        onChange={(e) => setSocialLinks({ ...socialLinks, github: e.target.value })}
+                        className="flex-1 px-3 py-2 text-xs bg-transparent text-black focus:outline-none"
+                        placeholder="https://github.com/yahyanaim"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 mb-1">
+                      البريد الإلكتروني الرسمي
+                    </label>
+                    <div className="flex items-center border border-neutral-300 bg-neutral-50 focus-within:border-black">
+                      <span className="px-3 text-xs text-neutral-500 border-l border-neutral-200 bg-neutral-100 py-2.5">
+                        @
+                      </span>
+                      <input
+                        type="text"
+                        dir="ltr"
+                        value={socialLinks.email}
+                        onChange={(e) => setSocialLinks({ ...socialLinks, email: e.target.value })}
+                        className="flex-1 px-3 py-2 text-xs bg-transparent text-black focus:outline-none"
+                        placeholder="yahyanaim2001@gmail.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4">
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 bg-[#0a1226] text-[#FACC15] hover:bg-[#152347] text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-sm"
+                    >
+                      حفظ وتحديث حسابات التواصل
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Card 2: Mac Device Authorization & 404 Camouflage Security */}
+              <div className="bg-white border border-neutral-300 p-6 sm:p-8">
+                <div className="flex items-center gap-3 pb-4 mb-4 border-b border-neutral-200">
+                  <div className="w-10 h-10 rounded-full bg-[#0a1226] text-[#FACC15] flex items-center justify-center">
+                    <Laptop size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-black font-serif">
+                      حماية وتمويه لوحة التحكم لجهاز Mac الخاص بك
+                    </h2>
+                    <p className="text-xs text-neutral-500">
+                      نظام أمان الجهاز الحصري: لا يستطيع أي شخص على الإنترنت رؤية لوحة التحكم
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 text-xs text-neutral-700 leading-relaxed">
+                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-start gap-3">
+                    <CheckCircle size={20} className="shrink-0 text-emerald-600 mt-0.5" />
+                    <div>
+                      <span className="font-bold block text-sm">جهاز Mac الخاص بك مصرح ونشط الآن</span>
+                      <span>
+                        لوحة التحكم تعمل بسلاسة على جهازك. عند زيارة أي شخص غريب أو زاحف إنترنت لرابط <code className="bg-emerald-100 px-1 py-0.5 rounded font-mono">/admin</code>، تظهر له صفحة 404 عادية تفيد بأن الصفحة غير موجودة نهائياً.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-200">
+                    <span className="font-bold text-black block mb-2">
+                      رابط ترخيص جهاز الماك السري:
+                    </span>
+                    <p className="text-neutral-600 mb-3 text-[11px]">
+                      إذا أردت فتح لوحة التحكم على متصفح آخر في جهاز الماك (مثل Safari أو Chrome) عند نشر الموقع لاحقاً على استضافة خارجية، استخدم هذا الرابط مرة واحدة لتسجيل جهازك:
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        dir="ltr"
+                        value={
+                          typeof window !== 'undefined'
+                            ? `${window.location.origin}/admin?mac_key=yahia_mac_secure_2026`
+                            : '/admin?mac_key=yahia_mac_secure_2026'
+                        }
+                        className="flex-1 p-2 bg-white border border-neutral-300 rounded font-mono text-[11px] text-neutral-800"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                          navigator.clipboard.writeText(`${origin}/admin?mac_key=yahia_mac_secure_2026`);
+                          showToast('تم نسخ رابط الترخيص السري!');
+                        }}
+                        className="px-4 py-2 bg-black text-white hover:bg-neutral-800 rounded font-bold text-xs cursor-pointer"
+                      >
+                        نسخ
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

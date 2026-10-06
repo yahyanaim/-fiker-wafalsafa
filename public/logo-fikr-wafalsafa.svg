@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" fill="none">
+  <!-- Emblem -->
+  <g transform="translate(10, 10)">
+    <rect x="5" y="5" width="50" height="50" rx="10" stroke="#FFFFFF" stroke-width="4.5" />
+    <rect x="30" y="8" width="31" height="31" transform="rotate(45 30 8)" stroke="#FACC15" stroke-width="3.5" />
+    <circle cx="30" cy="30" r="6" fill="#FACC15" />
+  </g>
+  <!-- Typography -->
+  <text x="85" y="52" font-family="'Greta Arabic AR LT', 'Noto Naskh Arabic', serif" font-size="34" font-weight="bold" fill="#FFFFFF">فكر</text>
+  <text x="145" y="52" font-family="'Greta Arabic AR LT', 'Noto Naskh Arabic', serif" font-size="34" font-weight="bold" fill="#FACC15">و</text>
+  <text x="175" y="52" font-family="'Greta Arabic AR LT', 'Noto Naskh Arabic', serif" font-size="34" font-weight="bold" fill="#FFFFFF">فلسفة</text>
+</svg>

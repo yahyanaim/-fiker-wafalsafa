@@ -21,14 +21,33 @@ export const ArticleBodyRenderer: React.FC<ArticleBodyRendererProps> = ({ conten
         const trimmed = block.trim();
         if (!trimmed) return null;
 
+        // Image Block: ![alt](url)
+        const imageMatch = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/);
+        if (imageMatch) {
+          const alt = imageMatch[1];
+          const src = imageMatch[2];
+          return (
+            <figure key={idx} className="my-8 overflow-hidden border border-neutral-200 bg-neutral-50 rounded-sm">
+              <img
+                src={src}
+                alt={alt || 'صورة المقال'}
+                className="w-full h-auto max-h-[560px] object-cover mx-auto"
+                loading="lazy"
+              />
+              {alt && (
+                <figcaption className="p-3 text-center text-xs text-neutral-500 border-t border-neutral-100 bg-white">
+                  {alt}
+                </figcaption>
+              )}
+            </figure>
+          );
+        }
+
         // Blockquote
         if (trimmed.startsWith('>')) {
           const quoteText = trimmed.replace(/^>\s*/gm, '');
           return (
-            <blockquote
-              key={idx}
-              className="my-8 p-5 sm:p-6 bg-neutral-50 border-r-4 border-black text-black text-lg sm:text-xl font-medium leading-relaxed"
-            >
+            <blockquote key={idx}>
               {formatInlineText(quoteText)}
             </blockquote>
           );
@@ -37,7 +56,7 @@ export const ArticleBodyRenderer: React.FC<ArticleBodyRendererProps> = ({ conten
         // H1 Heading
         if (trimmed.startsWith('# ')) {
           return (
-            <h1 key={idx} className="text-3xl sm:text-4xl font-bold text-black my-6">
+            <h1 key={idx}>
               {formatInlineText(trimmed.replace(/^#\s+/, ''))}
             </h1>
           );
@@ -46,7 +65,7 @@ export const ArticleBodyRenderer: React.FC<ArticleBodyRendererProps> = ({ conten
         // H2 Heading
         if (trimmed.startsWith('## ')) {
           return (
-            <h2 key={idx} className="text-2xl sm:text-3xl font-bold text-black mt-8 mb-4 border-r-3 border-black pr-3">
+            <h2 key={idx}>
               {formatInlineText(trimmed.replace(/^##\s+/, ''))}
             </h2>
           );
@@ -55,7 +74,7 @@ export const ArticleBodyRenderer: React.FC<ArticleBodyRendererProps> = ({ conten
         // H3 Heading
         if (trimmed.startsWith('### ')) {
           return (
-            <h3 key={idx} className="text-xl sm:text-2xl font-bold text-black mt-6 mb-3">
+            <h3 key={idx}>
               {formatInlineText(trimmed.replace(/^###\s+/, ''))}
             </h3>
           );
@@ -65,7 +84,7 @@ export const ArticleBodyRenderer: React.FC<ArticleBodyRendererProps> = ({ conten
         if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
           const items = trimmed.split('\n').filter((l) => l.trim().startsWith('- ') || l.trim().startsWith('* '));
           return (
-            <ul key={idx} className="list-disc list-inside space-y-2 pr-4 text-black text-base sm:text-lg mb-6 leading-relaxed">
+            <ul key={idx} className="list-disc list-inside space-y-2 pr-4 text-black text-[18px] mb-6 leading-[30px]">
               {items.map((item, itemIdx) => (
                 <li key={itemIdx} className="text-black">
                   {formatInlineText(item.replace(/^[-*]\s+/, ''))}
@@ -79,7 +98,7 @@ export const ArticleBodyRenderer: React.FC<ArticleBodyRendererProps> = ({ conten
         if (/^\d+\.\s/.test(trimmed)) {
           const items = trimmed.split('\n').filter((l) => /^\d+\.\s/.test(l.trim()));
           return (
-            <ol key={idx} className="list-decimal list-inside space-y-2 pr-4 text-black text-base sm:text-lg mb-6 leading-relaxed">
+            <ol key={idx} className="list-decimal list-inside space-y-2 pr-4 text-black text-[18px] mb-6 leading-[30px]">
               {items.map((item, itemIdx) => (
                 <li key={itemIdx} className="text-black">
                   {formatInlineText(item.replace(/^\d+\.\s+/, ''))}
@@ -89,13 +108,9 @@ export const ArticleBodyRenderer: React.FC<ArticleBodyRendererProps> = ({ conten
           );
         }
 
-        // Normal paragraph with formatted inline bold/italic (101n style: p dir="rtl")
+        // Normal paragraph with 101note exact typography
         return (
-          <p
-            key={idx}
-            dir="rtl"
-            className="text-black text-[18px] sm:text-[20px] lg:text-[21px] font-normal leading-[2] sm:leading-[2.2] mb-7 text-justify"
-          >
+          <p key={idx} dir="rtl">
             {formatInlineText(trimmed)}
           </p>
         );
@@ -106,6 +121,7 @@ export const ArticleBodyRenderer: React.FC<ArticleBodyRendererProps> = ({ conten
 
 /**
  * Handles inline formatting: **bold**, *italic*, and [link](url)
+ * Note: Never use font-serif on Arabic strong tags to preserve typographic harmony!
  */
 function formatInlineText(text: string): React.ReactNode {
   // Regex to split tokens for **bold** and *italic*
@@ -114,7 +130,7 @@ function formatInlineText(text: string): React.ReactNode {
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return (
-        <strong key={index} className="font-bold text-black font-serif">
+        <strong key={index} className="font-semibold text-black">
           {part.slice(2, -2)}
         </strong>
       );

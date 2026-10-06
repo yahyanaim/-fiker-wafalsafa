@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useArticles } from '@/context/ArticlesContext';
@@ -9,6 +9,7 @@ import { Footer } from '@/components/Footer';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { ArticleBodyRenderer } from '@/components/ArticleBodyRenderer';
 import { countArabicWords, toArabicNumerals } from '@/utils/arabic';
+import { optimizeImageFile } from '@/utils/image';
 import { Article } from '@/types';
 import {
   PenTool,
@@ -30,7 +31,12 @@ import {
   Lock,
   LogOut,
   ShieldCheck,
-  Check
+  Check,
+  Upload,
+  ImageIcon,
+  Link2,
+  X,
+  Loader2
 } from 'lucide-react';
 
 const COVER_PRESETS = [
@@ -118,6 +124,27 @@ export default function AdminPage() {
   const [body, setBody] = useState('');
   const [categorySlug, setCategorySlug] = useState(categories[0]?.slug || 'science');
   const [coverImage, setCoverImage] = useState(COVER_PRESETS[0].url);
+  const [customImageUrl, setCustomImageUrl] = useState('');
+  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [showInsertImageModal, setShowInsertImageModal] = useState(false);
+  const [inTextImageAlt, setInTextImageAlt] = useState('');
+  const [inTextImageSrc, setInTextImageSrc] = useState('');
+  const coverFileInputRef = useRef<HTMLInputElement | null>(null);
+  const inTextFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Load user's uploaded photos history from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('fiker_uploaded_photos');
+      if (saved) {
+        setUploadedPhotos(JSON.parse(saved));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const [isPublished, setIsPublished] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
   const [tagsInput, setTagsInput] = useState('فلسفة, علوم, أدب, تأملات');
@@ -128,6 +155,113 @@ export default function AdminPage() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Upload handler for article cover photo
+  const handleCoverFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploading(true);
+      const optimized = await optimizeImageFile(file);
+      setCoverImage(optimized);
+      setUploadedPhotos((prev) => {
+        const next = [optimized, ...prev.filter((p) => p !== optimized)].slice(0, 18);
+        try {
+          localStorage.setItem('fiker_uploaded_photos', JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+        return next;
+      });
+      showToast('تم رفع الصورة بنجاح وتعيينها كغلاف');
+    } catch (err: any) {
+      showToast(err?.message || 'فشل في رفع الصورة');
+    } finally {
+      setIsUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  // Apply custom URL for article cover photo
+  const handleApplyCustomImageUrl = () => {
+    if (!customImageUrl.trim()) {
+      showToast('يرجى إدخال رابط صورة صحيح');
+      return;
+    }
+    const trimmed = customImageUrl.trim();
+    setCoverImage(trimmed);
+    setUploadedPhotos((prev) => {
+      const next = [trimmed, ...prev.filter((p) => p !== trimmed)].slice(0, 18);
+      try {
+        localStorage.setItem('fiker_uploaded_photos', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+    setCustomImageUrl('');
+    showToast('تم تعيين رابط الصورة كغلاف');
+  };
+
+  // Delete an uploaded photo from custom library
+  const handleDeleteUploadedPhoto = (photoToDelete: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setUploadedPhotos((prev) => {
+      const next = prev.filter((p) => p !== photoToDelete);
+      try {
+        localStorage.setItem('fiker_uploaded_photos', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+    if (coverImage === photoToDelete) {
+      setCoverImage(COVER_PRESETS[0].url);
+    }
+    showToast('تم حذف الصورة من مكتبة صورك المرفوعة');
+  };
+
+  // Upload handler for in-text image
+  const handleInTextFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploading(true);
+      const optimized = await optimizeImageFile(file);
+      setInTextImageSrc(optimized);
+      showToast('تم تجهيز الصورة للإدراج');
+    } catch (err: any) {
+      showToast(err?.message || 'فشل في قراءة الصورة');
+    } finally {
+      setIsUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  // Insert image markdown into article body
+  const handleInsertImageIntoBody = () => {
+    if (!inTextImageSrc.trim()) {
+      showToast('يرجى اختيار صورة أو إدخال رابطها أولاً');
+      return;
+    }
+    const altText = inTextImageAlt.trim() || 'صورة المقال';
+    const imageMarkdown = `\n\n![${altText}](${inTextImageSrc.trim()})\n\n`;
+
+    const textarea = document.getElementById('article-body-textarea') as HTMLTextAreaElement | null;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newBody = body.substring(0, start) + imageMarkdown + body.substring(end);
+      setBody(newBody);
+    } else {
+      setBody((prev) => prev + imageMarkdown);
+    }
+
+    setShowInsertImageModal(false);
+    setInTextImageSrc('');
+    setInTextImageAlt('');
+    showToast('تم إدراج الصورة في نص المقال بنجاح');
   };
 
   const wordCount = countArabicWords(body);
@@ -537,6 +671,19 @@ export default function AdminPage() {
                       >
                         <Quote size={14} />
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowInsertImageModal(!showInsertImageModal)}
+                        className={`p-2 border text-black flex items-center gap-1 ${
+                          showInsertImageModal
+                            ? 'bg-black text-white border-black'
+                            : 'border-neutral-200 hover:bg-neutral-100'
+                        }`}
+                        title="إدراج صورة داخل المقال"
+                      >
+                        <ImageIcon size={14} />
+                        <span className="text-[11px] font-bold">صورة</span>
+                      </button>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -555,6 +702,106 @@ export default function AdminPage() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Inline Image Inserter Modal/Panel */}
+                  {showInsertImageModal && (
+                    <div className="p-4 bg-neutral-100 border border-neutral-300 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-black flex items-center gap-1.5">
+                          <ImageIcon size={14} />
+                          إدراج صورة داخل نص المقال
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowInsertImageModal(false)}
+                          className="text-neutral-500 hover:text-black p-1"
+                        >
+                          <X size={15} />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Option 1: File from device */}
+                        <div>
+                          <label className="block text-[11px] font-bold text-neutral-700 mb-1">
+                            رفع صورة من الجهاز:
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => inTextFileInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="w-full py-2 px-3 border border-dashed border-neutral-400 hover:border-black bg-white flex items-center justify-center gap-1.5 text-xs text-black font-medium transition-colors"
+                          >
+                            <Upload size={13} />
+                            <span>{isUploading ? 'جارٍ المعالجة...' : 'اختر ملف صورة من جهازك'}</span>
+                          </button>
+                          <input
+                            type="file"
+                            ref={inTextFileInputRef}
+                            accept="image/*"
+                            onChange={handleInTextFileUpload}
+                            className="hidden"
+                          />
+                        </div>
+
+                        {/* Option 2: Image URL */}
+                        <div>
+                          <label className="block text-[11px] font-bold text-neutral-700 mb-1">
+                            أو رابط صورة مباشر:
+                          </label>
+                          <input
+                            type="url"
+                            placeholder="https://... رابط الصورة"
+                            value={inTextImageSrc}
+                            onChange={(e) => setInTextImageSrc(e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs border border-neutral-300 bg-white text-black focus:outline-none focus:border-black"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Preview & Caption */}
+                      {inTextImageSrc && (
+                        <div className="flex items-center gap-3 p-2 bg-white border border-neutral-200">
+                          <img
+                            src={inTextImageSrc}
+                            alt="معاينة"
+                            className="w-16 h-12 object-cover border border-neutral-200"
+                          />
+                          <div className="flex-1">
+                            <input
+                              type="text"
+                              placeholder="تعليق أو وصف توضيحي أسفل الصورة (اختياري)..."
+                              value={inTextImageAlt}
+                              onChange={(e) => setInTextImageAlt(e.target.value)}
+                              className="w-full px-2.5 py-1 text-xs border border-neutral-200 text-black focus:outline-none focus:border-black"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowInsertImageModal(false);
+                            setInTextImageSrc('');
+                            setInTextImageAlt('');
+                          }}
+                          className="px-3 py-1.5 text-xs text-neutral-600 hover:text-black"
+                        >
+                          إلغاء
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleInsertImageIntoBody}
+                          disabled={!inTextImageSrc}
+                          className="px-4 py-1.5 bg-black hover:bg-neutral-800 disabled:opacity-40 text-white text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          إدراج الصورة في النص الآن
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {showPreview ? (
                     <div className="p-6 bg-neutral-50 border border-neutral-200 min-h-[350px]">
@@ -665,24 +912,155 @@ export default function AdminPage() {
                   </label>
                 </div>
 
-                {/* Cover Image Presets */}
-                <div className="bg-white border border-neutral-300 p-5 space-y-3">
-                  <span className="text-xs font-bold text-black uppercase tracking-wider block">
-                    صورة الغلاف
-                  </span>
-                  <div className="grid grid-cols-3 gap-2">
-                    {COVER_PRESETS.map((preset, idx) => (
+                {/* Comprehensive Cover Image Manager */}
+                <div className="bg-white border border-neutral-300 p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-black uppercase tracking-wider block">
+                      صورة غلاف المقال
+                    </span>
+                    {isUploading && (
+                      <span className="text-[11px] text-neutral-600 flex items-center gap-1 font-medium">
+                        <Loader2 size={12} className="animate-spin" />
+                        جارٍ المعالجة...
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Active Cover Preview */}
+                  <div className="space-y-2">
+                    <div className="relative w-full aspect-[16/9] border border-neutral-300 bg-neutral-900 overflow-hidden group">
+                      <Image
+                        src={coverImage}
+                        alt="غلاف المقال الحالي"
+                        fill
+                        className="object-cover"
+                        unoptimized={coverImage.startsWith('data:')}
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-3 text-center">
+                        <span className="text-[11px] font-bold text-white bg-black/80 px-2.5 py-1">
+                          الصورة المعتمدة حالياً للغلاف
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-neutral-500">
+                      <span>
+                        {coverImage.startsWith('data:') ? 'صورة مخصصة مرفوعة من الجهاز' : 'رابط أو نموذج مختار'}
+                      </span>
                       <button
-                        key={idx}
                         type="button"
-                        onClick={() => setCoverImage(preset.url)}
-                        className={`relative aspect-square border overflow-hidden transition-all ${
-                          coverImage === preset.url ? 'ring-2 ring-black' : 'border-neutral-200 opacity-70 hover:opacity-100'
-                        }`}
+                        onClick={() => setCoverImage(COVER_PRESETS[0].url)}
+                        className="text-neutral-500 hover:text-black underline cursor-pointer"
                       >
-                        <Image src={preset.url} alt={preset.name} fill className="object-cover" />
+                        الافتراضي
                       </button>
-                    ))}
+                    </div>
+                  </div>
+
+                  {/* Option 1: Upload from Device */}
+                  <div className="space-y-1.5 pt-2 border-t border-neutral-100">
+                    <span className="text-[11px] font-bold text-black block">
+                      1. إضافة صورة جديدة من جهازك:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => coverFileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="w-full py-2.5 px-3 border-2 border-dashed border-neutral-400 hover:border-black bg-neutral-50 hover:bg-neutral-100 flex items-center justify-center gap-2 text-xs font-bold text-black transition-all cursor-pointer"
+                    >
+                      <Upload size={14} />
+                      <span>{isUploading ? 'جارٍ المعالجة والرفع...' : 'رفع صورة من الكمبيوتر أو الهاتف'}</span>
+                    </button>
+                    <input
+                      type="file"
+                      ref={coverFileInputRef}
+                      accept="image/*"
+                      onChange={handleCoverFileUpload}
+                      className="hidden"
+                    />
+                    <span className="text-[10px] text-neutral-400 block text-right">
+                      يدعم PNG, JPG, WebP - يتم ضغطها وتحسين دقتها تلقائياً
+                    </span>
+                  </div>
+
+                  {/* Option 2: Custom URL */}
+                  <div className="space-y-1.5 pt-2 border-t border-neutral-100">
+                    <span className="text-[11px] font-bold text-black block">
+                      2. أو إدخال رابط صورة خارجي:
+                    </span>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="url"
+                        placeholder="https://... رابط الصورة"
+                        value={customImageUrl}
+                        onChange={(e) => setCustomImageUrl(e.target.value)}
+                        className="flex-1 px-2.5 py-1.5 text-xs border border-neutral-300 bg-neutral-50 text-black focus:outline-none focus:border-black"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyCustomImageUrl}
+                        className="px-3 py-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        تطبيق
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Uploaded Photos Library (if any) */}
+                  {uploadedPhotos.length > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t border-neutral-100">
+                      <span className="text-[11px] font-bold text-black block">
+                        صورك المرفوعة ({uploadedPhotos.length}):
+                      </span>
+                      <div className="grid grid-cols-4 gap-1.5 max-h-36 overflow-y-auto p-1 bg-neutral-50 border border-neutral-200">
+                        {uploadedPhotos.map((photo, idx) => {
+                          const isSelected = coverImage === photo;
+                          return (
+                            <div
+                              key={idx}
+                              onClick={() => setCoverImage(photo)}
+                              className={`group relative aspect-square border overflow-hidden cursor-pointer ${
+                                isSelected ? 'ring-2 ring-black' : 'border-neutral-200 hover:opacity-90'
+                              }`}
+                            >
+                              <img src={photo} alt={`مرفوعة ${idx + 1}`} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteUploadedPhoto(photo, e)}
+                                title="حذف من مكتبتي"
+                                className="absolute top-0.5 right-0.5 p-0.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X size={10} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Option 3: Presets Gallery */}
+                  <div className="space-y-1.5 pt-2 border-t border-neutral-100">
+                    <span className="text-[11px] font-bold text-neutral-600 block">
+                      3. أو اختيار نموذج جاهز:
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {COVER_PRESETS.map((preset, idx) => {
+                        const isSelected = coverImage === preset.url;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setCoverImage(preset.url)}
+                            title={preset.name}
+                            className={`relative aspect-square border overflow-hidden transition-all cursor-pointer ${
+                              isSelected ? 'ring-2 ring-black' : 'border-neutral-200 opacity-70 hover:opacity-100'
+                            }`}
+                          >
+                            <Image src={preset.url} alt={preset.name} fill className="object-cover" />
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>

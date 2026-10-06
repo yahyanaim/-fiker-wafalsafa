@@ -147,15 +147,15 @@ export default function ArticlePage({ params }: PageProps) {
             {/* Bottom Hero Content: Title, Brief, Cursive Author Signature */}
             <div className="relative z-10 max-w-[1440px] w-full mx-auto px-4 sm:px-8 lg:px-12 pb-10 sm:pb-14">
               <div className="max-w-4xl">
-                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.18] tracking-tight">
+                <h1 className="article-title text-3xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.18] tracking-tight">
                   {article.title}
                 </h1>
 
-                <p className="mt-4 sm:mt-5 text-white/95 text-base sm:text-xl leading-relaxed text-justify max-w-3xl font-light">
+                <p className="article-brief mt-4 sm:mt-5 text-white/95 text-base sm:text-xl leading-relaxed text-justify max-w-3xl font-light">
                   {article.excerpt}
                 </p>
 
-                <div className="mt-5 text-2xl sm:text-3xl font-signature text-[#FACC15]">
+                <div className="article-author mt-5 text-2xl sm:text-3xl font-signature text-[#FACC15]">
                   <Link
                     href={`/authors/yahia-naim`}
                     className="hover:opacity-85 transition-opacity"

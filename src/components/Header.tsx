@@ -38,7 +38,7 @@ export const Header: React.FC = () => {
   return (
     <>
       {/* Fikr Wafalsafa Fixed Top Navigation Bar - Blurry Glassmorphism so photo under it appears */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#0a1226]/45 backdrop-blur-md text-white border-b border-white/10 shadow-xs transition-colors duration-300">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#0a1226]/45 backdrop-blur-md text-white border-b-2 border-white shadow-xs transition-colors duration-300">
         <div className="full-width-limited px-4 sm:px-8 lg:px-12">
           <div className="flex items-center justify-between h-[65px] md:h-[80px] lg:h-[90px]">
             {/* Right Side (RTL Start): Nav Menu Hamburger + Search */}

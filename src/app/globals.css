@@ -358,33 +358,65 @@ body {
   font-weight: 700 !important;
   white-space: pre-wrap;
 }
+.article-title {
+  font-family: var(--font-arabic), 'Greta Arabic AR LT', sans-serif !important;
+  font-weight: 700 !important;
+}
 @media screen and (max-width: 767.9px) {
   .article-title {
-    font-size: 9.867vw !important;
-    line-height: 12.747vw !important;
+    font-size: 26px !important;
+    line-height: 1.25 !important;
   }
 }
 @media screen and (min-width: 768px) {
   .article-title {
-    font-size: 50px !important;
-    line-height: 1.18 !important;
+    font-size: 48px !important;
+    line-height: 1.15 !important;
   }
 }
 @media screen and (min-width: 1024px) {
   .article-title {
     font-size: 60px !important;
-    line-height: 1.18 !important;
+    line-height: 1.15 !important;
+  }
+}
+@media screen and (min-width: 1440px) {
+  .article-title {
+    font-size: 78px !important;
+    line-height: 1.12 !important;
   }
 }
 
 .article-brief {
-  font-family: var(--font-article-body) !important;
-  font-weight: 400 !important;
+  font-family: var(--font-arabic), 'Greta Arabic AR LT', sans-serif !important;
+  font-weight: 600 !important;
+}
+@media screen and (max-width: 767.9px) {
+  .article-brief {
+    font-size: 16px !important;
+    line-height: 28px !important;
+    margin-top: 12px !important;
+  }
 }
 @media screen and (min-width: 768px) {
   .article-brief {
-    font-size: 23px !important;
-    line-height: 35px !important;
+    font-size: 22px !important;
+    line-height: 34px !important;
+    margin-top: 20px !important;
+  }
+}
+@media screen and (min-width: 1024px) {
+  .article-brief {
+    font-size: 24px !important;
+    line-height: 38px !important;
+    margin-top: 22px !important;
+  }
+}
+@media screen and (min-width: 1440px) {
+  .article-brief {
+    font-size: 28px !important;
+    line-height: 44px !important;
+    margin-top: 26px !important;
   }
 }
 
@@ -393,15 +425,23 @@ body {
 }
 @media screen and (max-width: 767.9px) {
   .article-author {
-    font-size: 6.933vw !important;
-    line-height: 8.267vw !important;
+    font-size: 24px !important;
+    line-height: 1.3 !important;
+    margin-top: 16px !important;
   }
 }
 @media screen and (min-width: 768px) {
   .article-author {
     font-size: 35px !important;
-    margin-top: 25px !important;
-    margin-bottom: 25px !important;
+    margin-top: 24px !important;
+    margin-bottom: 24px !important;
+  }
+}
+@media screen and (min-width: 1440px) {
+  .article-author {
+    font-size: 48px !important;
+    margin-top: 32px !important;
+    margin-bottom: 32px !important;
   }
 }
 

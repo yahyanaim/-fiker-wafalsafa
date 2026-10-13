@@ -117,56 +117,87 @@ export default function ArticlePage({ params }: PageProps) {
 
       {/* Main Article Page Structure */}
       <main className="flex-1 w-full bg-white">
-        {/* 1. Article Page Top Section: Cover Photo extends from y=0 under the blurry navbar */}
-        <div className="relative w-full bg-[#0a1226] text-white border-b border-[#1e293b] overflow-hidden">
+        {/* 1. Article Page Top Section: Exact 101 Note Hero Architecture */}
+        <div className="relative w-full bg-[#18181b] overflow-hidden">
+          {/* Cover image container starting at y=0 behind the header */}
           <div
-            className="relative w-full min-h-[500px] md:min-h-[580px] flex flex-col justify-between overflow-hidden bg-cover bg-center"
+            className="top-section-container relative w-full pt-[65px] md:pt-[80px] lg:pt-[90px] min-h-[280px] md:min-h-[580px] lg:min-h-[660px] xl:min-h-[740px] flex flex-col justify-between overflow-hidden bg-cover bg-center"
             style={{
               backgroundImage: `url(${article.coverImage})`,
             }}
           >
-            {/* Dark Blue gradient overlay: lighter at top so photo shines through the blurry navbar */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0a1226] via-[#0a1226]/65 to-[#0a1226]/20 z-0" />
+            {/* Subtle dark tint over image for contrast */}
+            <div className="absolute inset-0 bg-black/25 pointer-events-none z-0" />
 
-            {/* Top Bar inside Hero: Category Icon positioned below the blurry navbar */}
-            <div className="relative z-10 max-w-[1440px] w-full mx-auto px-4 sm:px-8 lg:px-12 pt-[85px] md:pt-[105px] lg:pt-[115px]">
+            {/* Top gradient for header text legibility */}
+            <div className="absolute top-0 left-0 right-0 h-32 md:h-44 bg-gradient-to-b from-black/60 to-transparent pointer-events-none z-0" />
+
+            {/* Bottom gradient for author signature & brief legibility */}
+            <div className="absolute bottom-0 left-0 right-0 h-64 md:h-84 bg-gradient-to-t from-black/85 via-black/45 to-transparent pointer-events-none z-0" />
+
+            {/* Crisp white horizontal divider below header spanning full width */}
+            <div className="relative z-10 w-full">
+              {/* Standalone White Category Icon positioned on upper left (like 101note screenshot) */}
               {category && (
                 <Link
                   href={`/categories/${category.slug}`}
                   title={category.name}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0a1226]/80 backdrop-blur-md border border-[#FACC15]/40 text-white hover:border-[#FACC15] transition-colors"
+                  className="category-icon absolute left-0 top-0 z-20 m-5 sm:m-7 md:m-9 lg:m-12 hover:opacity-75 transition-opacity inline-block"
                 >
                   <CategoryIcon
                     name={category.name}
                     slug={category.slug}
-                    size={20}
+                    size={48}
                     onDark={true}
+                    className="text-white w-7 h-7 sm:w-9 sm:h-9 md:w-11 md:h-11 lg:w-13 lg:h-13 drop-shadow-md"
                   />
-                  <span className="text-xs font-bold text-[#FACC15]">{category.name}</span>
                 </Link>
               )}
-            </div>
 
-            {/* Bottom Hero Content: Title, Brief, Cursive Author Signature */}
-            <div className="relative z-10 max-w-[1440px] w-full mx-auto px-4 sm:px-8 lg:px-12 pb-10 sm:pb-14">
-              <div className="max-w-4xl">
-                <h1 className="article-title text-3xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.18] tracking-tight">
-                  {article.title}
-                </h1>
+              {/* Desktop/Tablet Hero Content: Aligned Right (upper-article-info) */}
+              <div className="upper-article-info hidden md:flex flex-col justify-end w-full max-w-[1440px] mx-auto px-6 sm:px-10 md:px-14 lg:px-20 xl:px-28 pt-16 md:pt-24 lg:pt-32 pb-10 md:pb-14 lg:pb-16 text-right">
+                <div className="max-w-4xl lg:max-w-5xl mr-0 ml-auto">
+                  {/* Title */}
+                  <h1 className="article-title text-white font-bold text-4xl md:text-5xl lg:text-[60px] xl:text-[76px] leading-[1.15] tracking-tight drop-shadow-md whitespace-pre-wrap">
+                    {article.title}
+                  </h1>
 
-                <p className="article-brief mt-4 sm:mt-5 text-white/95 text-base sm:text-xl leading-relaxed text-justify max-w-3xl font-light">
-                  {article.excerpt}
-                </p>
+                  {/* Brief / Excerpt */}
+                  <p className="article-brief mt-4 md:mt-5 lg:mt-6 text-white text-lg md:text-[22px] lg:text-[24px] xl:text-[27px] font-semibold leading-relaxed md:leading-[1.65] max-w-3xl lg:max-w-4xl drop-shadow-sm text-right">
+                    {article.excerpt}
+                  </p>
 
-                <div className="article-author mt-5 text-2xl sm:text-3xl font-signature text-[#FACC15]">
-                  <Link
-                    href={`/authors/yahia-naim`}
-                    className="hover:opacity-85 transition-opacity"
-                  >
-                    {author.name}
-                  </Link>
+                  {/* Author Cursive Signature (Pure White) */}
+                  <div className="article-author mt-5 md:mt-7 lg:mt-8 mb-2">
+                    <Link
+                      href={`/authors/yahia-naim`}
+                      className="font-signature text-white text-3xl md:text-4xl lg:text-[42px] xl:text-[48px] hover:opacity-85 transition-opacity inline-block drop-shadow-sm"
+                      style={{ fontFamily: 'var(--font-signature)' }}
+                    >
+                      {author.name}
+                    </Link>
+                  </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Mobile Fallback (lower-article-info): Shown below photo on small screens (< 768px) */}
+          <div className="lower-article-info block md:hidden w-full px-5 py-6 bg-white text-black border-b border-neutral-100 text-right">
+            <h1 className="article-title text-2xl sm:text-3xl font-bold text-black leading-tight">
+              {article.title}
+            </h1>
+            <p className="article-brief mt-3 text-base font-semibold text-neutral-800 leading-relaxed">
+              {article.excerpt}
+            </p>
+            <div className="article-author mt-4 text-2xl font-signature text-black">
+              <Link
+                href={`/authors/yahia-naim`}
+                className="hover:opacity-80 transition-opacity"
+                style={{ fontFamily: 'var(--font-signature)' }}
+              >
+                {author.name}
+              </Link>
             </div>
           </div>
         </div>

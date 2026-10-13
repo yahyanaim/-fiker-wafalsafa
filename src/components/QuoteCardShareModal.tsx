@@ -14,7 +14,6 @@ import {
   Loader2,
   Check,
   Type,
-  Palette,
   Ratio
 } from 'lucide-react';
 
@@ -34,6 +33,14 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
   const currentUrl =
     shareUrl || (typeof window !== 'undefined' ? window.location.href : '');
 
+  // Category and Author information from current page
+  const category = getCategoryBySlug(article.categorySlug);
+  const categoryName = category?.name || 'فلسفة';
+  const authorName = 'يحيى نعيم';
+  const currentYear = '2026';
+  const articleNumber = article.id.replace(/\D/g, '').slice(0, 4) || '1750';
+  const siteDomain = 'fikerwafalsafa.com';
+
   // Options
   const [displayText, setDisplayText] = useState(article.title || '');
   const [isUsingTitle, setIsUsingTitle] = useState(true);
@@ -46,9 +53,6 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
 
   const cardRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  const category = getCategoryBySlug(article.categorySlug);
-  const categoryName = category?.name || 'فلسفة';
 
   // Extract keywords for quick highlighting
   useEffect(() => {
@@ -87,7 +91,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
   // Copy share message
   const handleCopy = async () => {
     try {
-      const msg = `«${displayText}»\n\n— من مقال: ${article.title}\nبقلم: يحيى نعيم\n${currentUrl}`;
+      const msg = `«${displayText}»\n\n— من مقال: ${article.title}\nبقلم: ${authorName}\n${currentUrl}`;
       await navigator.clipboard.writeText(msg);
       setCopied(true);
       showToast('تم نسخ الاقتباس ورابط المقال بنجاح!');
@@ -99,13 +103,13 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
 
   // Social share links
   const handleShareTwitter = () => {
-    const text = `«${displayText.slice(0, 180)}»\n\n— من مقال: ${article.title}\nبقلم يحيى نعيم`;
+    const text = `«${displayText.slice(0, 180)}»\n\n— من مقال: ${article.title}\nبقلم ${authorName}`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentUrl)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleShareWhatsApp = () => {
-    const text = `«${displayText}»\n\n— من مقال: *${article.title}*\nبقلم: يحيى نعيم\n\n${currentUrl}`;
+    const text = `«${displayText}»\n\n— من مقال: *${article.title}*\nبقلم: ${authorName}\n\n${currentUrl}`;
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
@@ -116,13 +120,11 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
       const img = new Image();
       img.crossOrigin = 'anonymous';
 
-      // If remote image and not data url, route through local proxy
       const isRemote = src.startsWith('http://') || src.startsWith('https://');
       const safeSrc = isRemote ? `/api/proxy-image?url=${encodeURIComponent(src)}` : src;
 
       img.onload = () => resolve(img);
       img.onerror = () => {
-        // Direct fallback
         const fallbackImg = new Image();
         fallbackImg.crossOrigin = 'anonymous';
         fallbackImg.onload = () => resolve(fallbackImg);
@@ -133,7 +135,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
     });
   };
 
-  // High-Resolution 101 Note Canvas Generator
+  // High-Resolution Canvas Generator respecting exact fonts, RTL, and positioning
   const handleDownloadImage = async () => {
     setIsDownloading(true);
     try {
@@ -143,13 +145,24 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // Ensure all custom webfonts (Greta Arabic, Arslan Wessam A) are ready
+      // 1. Explicitly load exact web fonts into the browser context
       if (typeof document !== 'undefined' && document.fonts) {
-        await document.fonts.ready;
+        try {
+          await Promise.all([
+            document.fonts.load('bold 48px "Greta Arabic AR LT"'),
+            document.fonts.load('bold 52px "Greta Arabic AR LT"'),
+            document.fonts.load('600 24px "Greta Arabic AR LT"'),
+            document.fonts.load('42px "Arslan Wessam A"'),
+            document.fonts.load('42px "(A) Arslan Wessam A (A) Arslan Wessam A"'),
+            document.fonts.ready,
+          ]);
+        } catch {
+          // Continue if already available
+        }
       }
 
       // Sizing
-      // 4:5 Portrait: 1080 x 1350
+      // 4:5 Portrait: 1080 x 1350 (Reference Image)
       // 9:16 Story: 1080 x 1920
       // 1:1 Square: 1080 x 1080
       let width = 1080;
@@ -163,7 +176,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
       canvas.width = width;
       canvas.height = height;
 
-      // 1. Draw Cover Artwork edge-to-edge
+      // 2. Draw Cover Artwork edge-to-edge
       try {
         const img = await loadSafeImage(article.coverImage);
         const scale = Math.max(width / img.width, height / img.height);
@@ -171,106 +184,107 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
         const y = (height - img.height * scale) / 2;
         ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
       } catch {
-        // Fallback elegant artistic tone
         ctx.fillStyle = '#263238';
         ctx.fillRect(0, 0, width, height);
       }
 
-      // 2. Soft Dark Vignette at Bottom Right for crisp text readability
-      // Keeps top 60% of painting clean and natural
+      // 3. Vignette Overlays:
+      // Keep the upper and left portions of the artwork visible (like the man in the reference photo)
+      // and gently darken the bottom-right for clean RTL text contrast.
       const bottomGrad = ctx.createLinearGradient(0, height * 0.45, 0, height);
       bottomGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      bottomGrad.addColorStop(0.3, 'rgba(0, 0, 0, 0.25)');
+      bottomGrad.addColorStop(0.35, 'rgba(0, 0, 0, 0.25)');
       bottomGrad.addColorStop(0.7, 'rgba(0, 0, 0, 0.65)');
-      bottomGrad.addColorStop(1, 'rgba(0, 0, 0, 0.88)');
+      bottomGrad.addColorStop(1, 'rgba(0, 0, 0, 0.90)');
       ctx.fillStyle = bottomGrad;
       ctx.fillRect(0, 0, width, height);
 
-      // Radial shade on bottom right
+      // Radial dark shadow in bottom-right corner
       const radGrad = ctx.createRadialGradient(
-        width * 0.8,
+        width * 0.85,
         height * 0.85,
-        100,
-        width * 0.8,
+        50,
+        width * 0.85,
         height * 0.85,
-        700
+        650
       );
-      radGrad.addColorStop(0, 'rgba(0, 0, 0, 0.55)');
+      radGrad.addColorStop(0, 'rgba(0, 0, 0, 0.65)');
       radGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = radGrad;
       ctx.fillRect(0, 0, width, height);
 
-      // Top subtle bar shade for headers
-      const topGrad = ctx.createLinearGradient(0, 0, 0, 160);
+      // Top bar subtle shadow
+      const topGrad = ctx.createLinearGradient(0, 0, 0, 150);
       topGrad.addColorStop(0, 'rgba(0, 0, 0, 0.45)');
       topGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = topGrad;
-      ctx.fillRect(0, 0, width, 160);
+      ctx.fillRect(0, 0, width, 150);
 
-      // 3. Top Header: [20 / 26] (left), [101 Note Style Geometric Logo] (center), [Issue #] (right)
+      // 4. Top Bar Header:
       const topPadding = 65;
 
-      // Top Left: Stacked Year 20 / 26
+      // 4a. Top Left: 20 over 26
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('20', 80, topPadding);
-      ctx.fillText('26', 80, topPadding + 22);
+      ctx.direction = 'ltr';
+      ctx.fillText(currentYear.slice(0, 2), 75, topPadding);
+      ctx.fillText(currentYear.slice(2, 4), 75, topPadding + 22);
 
-      // Top Center: 101 Note Stylized Geometric Logo
+      // 4b. Top Center: Fikr wa Falsafa White Logo Emblem (Identical to 101 Note white glyph)
       const logoX = width / 2;
-      const logoY = topPadding - 10;
+      const logoY = topPadding - 12;
+
+      // Draw geometric emblem
       ctx.fillStyle = '#FFFFFF';
-
-      // Left bar of 101
+      // Left pillar
       ctx.beginPath();
-      ctx.roundRect(logoX - 44, logoY, 15, 48, 5);
+      ctx.roundRect(logoX - 44, logoY, 15, 48, 4);
       ctx.fill();
-
-      // Center ring 'O' of 101
+      // Center ring
       ctx.beginPath();
       ctx.arc(logoX, logoY + 24, 21, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#000000'; // Cutout center
+      ctx.fillStyle = '#000000'; // Cutout ring center
       ctx.beginPath();
       ctx.arc(logoX, logoY + 24, 10, 0, Math.PI * 2);
       ctx.fill();
-
-      // Right bar of 101
+      // Right pillar
       ctx.fillStyle = '#FFFFFF';
       ctx.beginPath();
-      ctx.roundRect(logoX + 29, logoY, 15, 48, 5);
+      ctx.roundRect(logoX + 29, logoY, 15, 48, 4);
       ctx.fill();
 
-      // Top Right: Note Number / Issue ID (e.g. 1750)
+      // 4c. Top Right: Article ID / Reading time
       ctx.textAlign = 'right';
       ctx.font = 'bold 22px system-ui, -apple-system, monospace';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      const noteNumber = (article.id.replace(/\D/g, '').slice(0, 4) || '1750');
-      ctx.fillText(noteNumber, width - 80, topPadding + 10);
+      ctx.fillText(articleNumber, width - 75, topPadding + 10);
 
-      // 4. Left Vertical Domain Watermark (Rotated 90 degrees)
+      // 5. Left Vertical Watermark (Rotated 90°): fikerwafalsafa.com
       ctx.save();
-      ctx.translate(52, height * 0.52);
+      ctx.translate(50, height * 0.52);
       ctx.rotate(-Math.PI / 2);
-      ctx.font = '500 17px system-ui, -apple-system, sans-serif';
+      ctx.font = '500 16px system-ui, -apple-system, sans-serif';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
       ctx.textAlign = 'center';
       ctx.letterSpacing = '1.5px';
-      ctx.fillText('101n.com', 0, 0);
+      ctx.fillText(siteDomain, 0, 0);
       ctx.restore();
 
-      // 5. Bottom Right Typography Block (RTL)
-      const contentRight = width - 80;
+      // 6. Bottom Right Content Block:
+      // Respect exact position from reference photo:
+      // Anchored to the right margin, constrained width (~58% of canvas) leaving left side visible
+      const contentRight = width - 75;
       const contentBottom = height - 90;
+      const maxTextWidth = width * 0.58;
 
       ctx.direction = 'rtl';
       ctx.textAlign = 'right';
 
-      // Measure Title / Text wrapping
-      const maxTextWidth = width * 0.76;
-      ctx.font = 'bold 50px "Greta Arabic AR LT", "Noto Naskh Arabic", sans-serif';
-      const textLineHeight = 70;
+      // 6a. Measure Text & Wrap in Greta Arabic Bold
+      ctx.font = 'bold 48px "Greta Arabic AR LT", "GretaArabicARLT", sans-serif';
+      const textLineHeight = 68;
 
       const words = displayText.split(' ');
       const lines: string[] = [];
@@ -288,16 +302,14 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
       }
       if (curLine) lines.push(curLine);
 
-      // Calculate total text height
       const totalTextHeight = lines.length * textLineHeight;
       const textStartY = contentBottom - totalTextHeight + 45;
 
-      // Position Author and Category above the main title
-      const authorY = textStartY - 55;
-      const categoryY = authorY - 45;
+      // Position Author and Category right above the title
+      const authorY = textStartY - 52;
+      const categoryY = authorY - 44;
 
-      // 5a. Category Glyph + Name: ✤ / الرابعة صباحًا (or category name)
-      // 4-dot clover glyph
+      // 6b. Category Glyph (4 dots clover) + Category Name: ✤ / [التصنيف]
       const glyphX = contentRight;
       const glyphY = categoryY - 14;
       ctx.fillStyle = '#FFFFFF';
@@ -309,18 +321,18 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
       ctx.arc(glyphX + 4, glyphY + 4, 3.5, 0, Math.PI * 2);
       ctx.fill();
 
-      // Category Name
-      ctx.font = '600 22px "Greta Arabic AR LT", sans-serif';
+      // Category Name in Greta Arabic
+      ctx.font = '600 22px "Greta Arabic AR LT", "GretaArabicARLT", sans-serif';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
       ctx.fillText(`/ ${categoryName}`, glyphX - 22, categoryY);
 
-      // 5b. Author in Signature Calligraphy Font: حسام سرحان / يحيى نعيم
-      ctx.font = '38px "Arslan Wessam A", "(A) Arslan Wessam A (A) Arslan Wessam A", cursive';
+      // 6c. Author Signature in Arslan Wessam A Cursive Script
+      ctx.font = '40px "Arslan Wessam A", "(A) Arslan Wessam A (A) Arslan Wessam A", cursive';
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillText('يحيى نعيم', contentRight, authorY);
+      ctx.fillText(authorName, contentRight, authorY);
 
-      // 5c. Bold Main Title
-      ctx.font = 'bold 50px "Greta Arabic AR LT", sans-serif';
+      // 6d. Main Title in Greta Arabic Bold
+      ctx.font = 'bold 48px "Greta Arabic AR LT", "GretaArabicARLT", sans-serif';
       ctx.fillStyle = '#FFFFFF';
 
       lines.forEach((line, idx) => {
@@ -328,20 +340,19 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
         ctx.fillText(line, contentRight, lineY);
       });
 
-      // 6. Playful 101 Note Yellow Doodles (Brush underline + Oval loop)
+      // 6e. Hand-Drawn Yellow Doodles (Brush Underline & Loop)
       if (showDoodles) {
-        // Yellow loop around keyword or last line
         ctx.save();
         ctx.strokeStyle = '#FDE047'; // Bright 101 Note Yellow
         ctx.lineWidth = 4.5;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        // Draw hand-drawn yellow underline under first line or keyword
+        // Yellow underline under the main headline
         const lastLineY = textStartY + (lines.length - 1) * textLineHeight;
         const underlineY = lastLineY + 14;
-        const underlineWidth = Math.min(320, maxTextWidth * 0.5);
-        const startX = contentRight - 80;
+        const underlineWidth = Math.min(300, maxTextWidth * 0.55);
+        const startX = contentRight - 40;
 
         ctx.beginPath();
         ctx.moveTo(startX, underlineY);
@@ -355,13 +366,12 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
         );
         ctx.stroke();
 
-        // Draw playful hand-drawn oval loop around the highlight keyword
+        // Yellow loop around the focal keyword
         if (highlightKeyword && displayText.includes(highlightKeyword)) {
-          // Loop on bottom right keyword
-          const loopCenterX = contentRight - 150;
-          const loopCenterY = lastLineY - 15;
+          const loopCenterX = contentRight - 140;
+          const loopCenterY = lastLineY - 14;
           ctx.beginPath();
-          ctx.ellipse(loopCenterX, loopCenterY, 130, 36, -0.04, 0, Math.PI * 1.95);
+          ctx.ellipse(loopCenterX, loopCenterY, 120, 34, -0.04, 0, Math.PI * 1.95);
           ctx.stroke();
         }
         ctx.restore();
@@ -370,13 +380,13 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
       // 7. Trigger Direct PNG Download
       const dataUrl = canvas.toDataURL('image/png', 1.0);
       const downloadLink = document.createElement('a');
-      downloadLink.download = `101note-${article.slug || 'poster'}.png`;
+      downloadLink.download = `fiker-${article.slug || 'poster'}.png`;
       downloadLink.href = dataUrl;
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);
 
-      showToast('تم تحميل بوستر المقال بدقة عالية بصيغة PNG بنجاح!');
+      showToast('تم تحميل بوستر المقال عالي الدقة (PNG) بنجاح!');
     } catch (err: any) {
       showToast(err?.message || 'حدث خطأ أثناء إنشاء الصورة');
     } finally {
@@ -398,7 +408,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
                 تصميم وتحميل بوستر المشاركة (نمط 101 Note)
               </h2>
               <p className="text-[11px] sm:text-xs text-neutral-400">
-                بوستر فني يدمج لوحة المقال مع الترويسة الأيقونية، الخط العريض، التوقيع، واللمسات التعبيرية
+                بوستر فني يدمج لوحة المقال مع الترويسة الأيقونية، خط غريتا العربي، توقيع الكاتب، واللمسات التعبيرية
               </p>
             </div>
           </div>
@@ -429,6 +439,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
             {/* The Live Visual Card Container (Identical to reference screenshot) */}
             <div
               ref={cardRef}
+              dir="rtl"
               className={`relative w-full rounded-xl overflow-hidden shadow-2xl transition-all duration-300 select-none border border-neutral-700/60 ${
                 aspectRatio === 'portrait'
                   ? 'aspect-[4/5] max-w-[420px]'
@@ -442,40 +453,40 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
                 backgroundPosition: 'center',
               }}
             >
-              {/* Soft Bottom-Right Gradient Shade */}
+              {/* Soft Bottom-Right Gradient Shade (Leaving top/left illustration clear) */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none z-0" />
-              <div className="absolute inset-0 bg-radial from-transparent to-black/30 pointer-events-none z-0" />
+              <div className="absolute inset-0 bg-radial from-transparent to-black/35 pointer-events-none z-0" />
 
-              {/* 1. Top Bar: [20 / 26] (left), [101 Geometric Logo] (center), [Note #] (right) */}
-              <div className="relative z-10 flex items-center justify-between px-6 pt-5">
+              {/* 1. Top Bar: [20 / 26] (left), [Fikr Emblem Logo] (center), [Article #] (right) */}
+              <div className="relative z-10 flex items-center justify-between px-6 pt-5" dir="ltr">
                 {/* Top Left: 20 / 26 */}
                 <div className="flex flex-col text-[11px] font-bold text-white/90 leading-tight select-none">
-                  <span>20</span>
-                  <span>26</span>
+                  <span>{currentYear.slice(0, 2)}</span>
+                  <span>{currentYear.slice(2, 4)}</span>
                 </div>
 
-                {/* Top Center: Stylized 101 Logo Glyph */}
+                {/* Top Center: Stylized Geometric Logo Glyph */}
                 <div className="flex items-center gap-1 text-white select-none">
-                  <div className="w-2.5 h-7 bg-white rounded-sm" />
-                  <div className="w-6 h-6 rounded-full border-[3.5px] border-white" />
-                  <div className="w-2.5 h-7 bg-white rounded-sm" />
+                  <div className="w-2 h-6 bg-white rounded-xs" />
+                  <div className="w-5 h-5 rounded-full border-[3px] border-white" />
+                  <div className="w-2 h-6 bg-white rounded-xs" />
                 </div>
 
                 {/* Top Right: Note Number */}
                 <div className="text-[11px] font-mono font-bold text-white/90 tracking-wider">
-                  {article.id.replace(/\D/g, '').slice(0, 4) || '1750'}
+                  {articleNumber}
                 </div>
               </div>
 
               {/* 2. Left Edge Vertical Domain Text */}
-              <div className="absolute left-2.5 top-1/2 -translate-y-1/2 -rotate-90 origin-center text-[9px] tracking-widest text-white/70 select-none z-10 font-sans">
-                101n.com
+              <div className="absolute left-2.5 top-1/2 -translate-y-1/2 -rotate-90 origin-center text-[9px] tracking-widest text-white/70 select-none z-10 font-sans" dir="ltr">
+                {siteDomain}
               </div>
 
-              {/* 3. Bottom Right Content & Typography Block (RTL) */}
-              <div className="absolute bottom-6 right-6 left-12 text-right z-10 flex flex-col items-end">
+              {/* 3. Bottom Right Content & Typography Block (RTL, positioned in lower right corner) */}
+              <div className="absolute bottom-6 right-6 max-w-[62%] text-right z-10 flex flex-col items-end">
                 {/* Category: ✤ / Category Name */}
-                <div className="flex items-center gap-1.5 text-white/90 text-xs sm:text-sm font-semibold mb-1">
+                <div className="flex items-center gap-1.5 text-white/90 text-xs sm:text-sm font-semibold mb-1" style={{ fontFamily: 'var(--font-arabic)' }}>
                   <span>/ {categoryName}</span>
                   {/* 4 dots clover glyph */}
                   <div className="grid grid-cols-2 gap-0.5 w-3 h-3">
@@ -486,17 +497,20 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
                   </div>
                 </div>
 
-                {/* Author Signature in Signature Font */}
+                {/* Author Signature in Authentic Signature Font */}
                 <div
-                  className="text-white text-xl sm:text-2xl font-signature mb-1.5 leading-none drop-shadow-sm"
+                  className="text-white text-xl sm:text-2xl font-signature mb-1 leading-none drop-shadow-sm"
                   style={{ fontFamily: 'var(--font-signature)' }}
                 >
-                  يحيى نعيم
+                  {authorName}
                 </div>
 
                 {/* Big Bold Title / Quote Text */}
                 <div className="relative">
-                  <h3 className="text-white text-lg sm:text-2xl font-bold font-arabic leading-snug tracking-tight drop-shadow-md">
+                  <h3
+                    className="text-white text-lg sm:text-xl lg:text-[23px] font-bold leading-snug tracking-tight drop-shadow-md"
+                    style={{ fontFamily: 'var(--font-arabic)' }}
+                  >
                     {displayText}
                   </h3>
 
@@ -505,7 +519,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
                     <div className="pointer-events-none mt-1">
                       {/* Playful Yellow Underline SVG */}
                       <svg
-                        className="w-40 sm:w-52 h-3.5 mr-auto text-[#FDE047]"
+                        className="w-36 sm:w-44 h-3 mr-auto text-[#FDE047]"
                         viewBox="0 0 200 12"
                         fill="none"
                       >

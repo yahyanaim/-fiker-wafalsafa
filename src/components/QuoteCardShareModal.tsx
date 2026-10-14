@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Article } from '@/types';
 import { getCategoryBySlug } from '@/data/categories';
+import { CategoryIcon } from '@/components/CategoryIcon';
 import { toPng } from 'html-to-image';
 import {
   X,
@@ -15,8 +16,11 @@ import {
   Loader2,
   Check,
   Type,
-  Ratio
+  Ratio,
+  ArrowUpCircle,
+  Shapes
 } from 'lucide-react';
+import { GRETA_BOLD_BASE64 } from '@/utils/gretaBoldBase64';
 
 interface QuoteCardShareModalProps {
   article: Article;
@@ -34,18 +38,19 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
   const currentUrl =
     shareUrl || (typeof window !== 'undefined' ? window.location.href : '');
 
-  // Authentic page information from Fikr wa Falsafa
+  // Authentic page information from Fikr wa Falsafa (Strictly NO 101)
   const category = getCategoryBySlug(article.categorySlug);
   const categoryName = category?.name || 'فلسفة';
-  const authorName = 'يحيى نعيم';
   const currentYear = '2026';
   const articleNumber = article.id.replace(/\D/g, '').slice(0, 4) || '1750';
-  const siteDomain = 'fikerwafalsafa.com';
+  const siteDomain = 'fikrwfalsafa.com';
 
-  // Options
+  // Options & Customization
   const [displayText, setDisplayText] = useState(article.title || '');
   const [isUsingTitle, setIsUsingTitle] = useState(true);
   const [aspectRatio, setAspectRatio] = useState<'portrait' | 'story' | 'square'>('portrait');
+  const [verticalPosition, setVerticalPosition] = useState<'high' | 'ultra' | 'mid'>('high');
+  const [iconStyle, setIconStyle] = useState<'station' | 'category'>('station');
   const [highlightKeyword, setHighlightKeyword] = useState<string>('');
   const [showDoodles, setShowDoodles] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -55,7 +60,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Derive proxy safe cover image URL to avoid CORS tainting during export
-  const safeCoverImage = React.useMemo(() => {
+  const safeCoverImage = useMemo(() => {
     if (!article.coverImage) return '/file.svg';
     if (article.coverImage.startsWith('http://') || article.coverImage.startsWith('https://')) {
       return `/api/proxy-image?url=${encodeURIComponent(article.coverImage)}`;
@@ -63,17 +68,58 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
     return article.coverImage;
   }, [article.coverImage]);
 
+  // Ensure Greta Arabic Bold font is registered and ready in document.fonts
+  useEffect(() => {
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      try {
+        const boldFont = new FontFace(
+          'Greta Arabic AR LT',
+          "url('/fonts/GretaArabicARLT-Bold.woff2') format('woff2')",
+          { weight: '700', style: 'normal' }
+        );
+        boldFont.load().then((loadedFont) => {
+          document.fonts.add(loadedFont);
+        }).catch(() => {
+          // System or pre-cached font will serve as fall-through
+        });
+      } catch (e) {
+        console.warn('FontFace API note:', e);
+      }
+    }
+  }, []);
+
   // Extract keywords for quick highlighting
   useEffect(() => {
     if (article.title) {
       setDisplayText(article.title);
       setIsUsingTitle(true);
-      const words = article.title.split(' ').filter((w) => w.length > 2);
+      const words = article.title
+        .split(/[\s\n]+/)
+        .map((w) => w.replace(/[«»"،.؛:]/g, '').trim())
+        .filter((w) => w.length > 2);
       if (words.length > 0) {
         setHighlightKeyword(words[words.length - 1]);
       }
     }
   }, [article.title]);
+
+  // List of words for the interactive highlight selector
+  const wordsList = useMemo(() => {
+    return displayText
+      .split(/[\s\n]+/)
+      .map((w) => w.replace(/[«»"،.؛:]/g, '').trim())
+      .filter((w) => w.length > 1);
+  }, [displayText]);
+
+  // Memoized Base64 Font Embed CSS (Pure data URI - zero network fetch needed)
+  const base64FontEmbedCss = useMemo(() => {
+    return `@font-face {
+      font-family: 'Greta Arabic AR LT';
+      src: url('data:font/woff2;charset=utf-8;base64,${GRETA_BOLD_BASE64}') format('woff2');
+      font-weight: 700;
+      font-style: normal;
+    }`;
+  }, []);
 
   if (!isOpen) return null;
 
@@ -85,7 +131,10 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
   const handleSelectTitleMode = () => {
     setIsUsingTitle(true);
     setDisplayText(article.title);
-    const words = article.title.split(' ').filter((w) => w.length > 2);
+    const words = article.title
+      .split(/[\s\n]+/)
+      .map((w) => w.replace(/[«»"،.؛:]/g, '').trim())
+      .filter((w) => w.length > 2);
     if (words.length > 0) setHighlightKeyword(words[words.length - 1]);
   };
 
@@ -93,14 +142,17 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
     setIsUsingTitle(false);
     const quote = article.excerpt || article.title;
     setDisplayText(quote);
-    const words = quote.split(' ').filter((w) => w.length > 2);
+    const words = quote
+      .split(/[\s\n]+/)
+      .map((w) => w.replace(/[«»"،.؛:]/g, '').trim())
+      .filter((w) => w.length > 2);
     if (words.length > 0) setHighlightKeyword(words[0]);
   };
 
   // Copy share message
   const handleCopy = async () => {
     try {
-      const msg = `«${displayText}»\n\n— من مقال: ${article.title}\nبقلم: ${authorName}\n${currentUrl}`;
+      const msg = `«${displayText}»\n\n— من مقال: ${article.title}\nمنصة فكر وفلسفة\n${currentUrl}`;
       await navigator.clipboard.writeText(msg);
       setCopied(true);
       showToast('تم نسخ الاقتباس ورابط المقال بنجاح!');
@@ -112,50 +164,145 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
 
   // Social share links
   const handleShareTwitter = () => {
-    const text = `«${displayText.slice(0, 180)}»\n\n— من مقال: ${article.title}\nبقلم ${authorName}`;
+    const text = `«${displayText.slice(0, 180)}»\n\n— من مقال: ${article.title}\nمنصة فكر وفلسفة`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentUrl)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleShareWhatsApp = () => {
-    const text = `«${displayText}»\n\n— من مقال: *${article.title}*\nبقلم: ${authorName}\n\n${currentUrl}`;
+    const text = `«${displayText}»\n\n— من مقال: *${article.title}*\nمنصة فكر وفلسفة\n\n${currentUrl}`;
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // High-Resolution Export: Uses html-to-image to snapshot the exact rendered DOM
-  // This guarantees 100% font match (Greta Arabic + Arslan Wessam A), native RTL, exact layout, and yellow scratches
+  // High-Resolution Export: Uses html-to-image with embedded base64 font
   const handleDownloadImage = async () => {
     setIsDownloading(true);
     try {
       if (!cardRef.current) return;
 
-      // Ensure fonts are loaded before taking screenshot
       if (typeof document !== 'undefined' && document.fonts) {
+        try {
+          await document.fonts.load("700 24px 'Greta Arabic AR LT'");
+        } catch (e) {
+          console.warn('Font load timeout check:', e);
+        }
         await document.fonts.ready;
       }
 
-      // Snapshot DOM element directly
       const dataUrl = await toPng(cardRef.current, {
         quality: 0.98,
-        pixelRatio: 3, // High-res 3x output (approx 1320 x 1650 px for crisp print/Instagram quality)
+        pixelRatio: 3, // High-res 3x output for ultra crisp text and artwork
         cacheBust: true,
+        fontEmbedCSS: base64FontEmbedCss,
+        skipFonts: true, // Prevents html-to-image from scanning external CSS stylesheets
       });
 
       const downloadLink = document.createElement('a');
-      downloadLink.download = `fiker-${article.slug || 'poster'}.png`;
+      downloadLink.download = `fikrwfalsafa-${article.slug || 'poster'}.png`;
       downloadLink.href = dataUrl;
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);
 
-      showToast('تم تحميل البوستر عالي الدقة (PNG) بالخطوط والتصميم الأصلي بنجاح!');
+      showToast('تم تحميل بوستر المقال عالي الدقة (PNG) بالخط والتصميم بنجاح!');
     } catch (err: any) {
       console.error('Download error:', err);
       showToast(err?.message || 'حدث خطأ أثناء إنشاء الصورة');
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  // Determine vertical positioning class: Elevated as requested ("make it Up a little not under")
+  const verticalPositionClass =
+    verticalPosition === 'ultra'
+      ? 'bottom-[36%] sm:bottom-[40%]'
+      : verticalPosition === 'mid'
+      ? 'bottom-[20%] sm:bottom-[24%]'
+      : 'bottom-[28%] sm:bottom-[32%]'; // 'high' default: leaves bottom 30% spacious & visible
+
+  // Helper to render the paragraph with Greta Arabic font and yellow hand-drawn scratches
+  const renderParagraphContent = () => {
+    if (!displayText) return null;
+    const lines = displayText.split('\n');
+
+    return (
+      <div className="relative text-right w-full">
+        {lines.map((line, lineIdx) => {
+          const words = line.split(' ');
+          return (
+            <div key={lineIdx} className="relative leading-[1.28] whitespace-normal">
+              {words.map((word, wordIdx) => {
+                const cleanWord = word.replace(/[«»"،.؛:]/g, '').trim();
+                const isCircled =
+                  showDoodles &&
+                  highlightKeyword &&
+                  cleanWord === highlightKeyword.trim();
+
+                return (
+                  <React.Fragment key={wordIdx}>
+                    {isCircled ? (
+                      <span className="relative inline-block mx-1">
+                        <span className="relative z-10 text-white font-bold">{word}</span>
+                        {/* Hand-drawn yellow marker loop around the selected keyword */}
+                        <svg
+                          className="absolute -inset-x-3 -inset-y-2 w-[calc(100%+24px)] h-[calc(100%+16px)] pointer-events-none z-0"
+                          viewBox="0 0 120 50"
+                          fill="none"
+                          preserveAspectRatio="none"
+                        >
+                          <path
+                            d="M 112 25 C 112 10, 85 4, 55 4 C 20 4, 5 12, 6 25 C 7 38, 25 45, 60 45 C 95 45, 114 38, 114 23 C 114 12, 98 6, 75 6"
+                            stroke="#FDE047"
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        {/* Small hand-drawn sparkle doodle near circled word */}
+                        <span className="absolute -left-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-90">
+                          <svg className="w-4 h-4 text-[#FDE047]" viewBox="0 0 24 24" fill="none" stroke="#FDE047" strokeWidth="2.2">
+                            <circle cx="12" cy="12" r="2" fill="#FDE047" />
+                            <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+                          </svg>
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-white font-bold">{word}</span>
+                    )}
+                    {wordIdx < words.length - 1 ? ' ' : ''}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          );
+        })}
+
+        {/* Hand-drawn yellow brush underline under the text block */}
+        {showDoodles && (
+          <div className="pointer-events-none mt-2.5 flex flex-col items-end">
+            <svg className="w-32 sm:w-44 h-3 text-[#FDE047] drop-shadow-sm" viewBox="0 0 200 12" fill="none">
+              <path
+                d="M 195 5 C 145 10, 65 3, 5 7"
+                stroke="#FDE047"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+            </svg>
+            {/* Small rectangular hatched doodle underneath */}
+            <div className="mr-2 mt-1">
+              <svg className="w-6 h-2.5 text-[#FDE047] opacity-85" viewBox="0 0 36 14" fill="none" stroke="#FDE047" strokeWidth="2" strokeLinecap="round">
+                <rect x="2" y="2" width="32" height="10" rx="2" />
+                <line x1="9" y1="2" x2="6" y2="12" />
+                <line x1="17" y1="2" x2="14" y2="12" />
+                <line x1="25" y1="2" x2="22" y2="12" />
+              </svg>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -168,11 +315,14 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
               <Sparkles size={18} />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-white" style={{ fontFamily: "'Greta Arabic AR LT', 'GretaArabicARLT', sans-serif" }}>
-                تصميم وتحميل بوستر المشاركة (نمط 101 Note)
+              <h2
+                className="text-base sm:text-lg font-bold text-white"
+                style={{ fontFamily: "'Greta Arabic AR LT', 'GretaArabicARLT', sans-serif" }}
+              >
+                تصميم وتحميل بوستر المشاركة — فكر وفلسفة
               </h2>
               <p className="text-[11px] sm:text-xs text-neutral-400">
-                مطابقة كاملة لخط المنصة، توقيع الكاتب (يحيى نعيم)، معلومات فكر وفلسفة، واللمسات التعبيرية
+                بوستر فني يدمج لوحة المقال مع شعار فكر وفلسفة، أيقونة التصنيف، والنص بالخط العريض في موضع مرتفع
               </p>
             </div>
           </div>
@@ -200,7 +350,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
               </span>
             </div>
 
-            {/* The Live Visual Card Container (Identical to reference screenshot) */}
+            {/* The Live Visual Card Container */}
             <div
               ref={cardRef}
               dir="rtl"
@@ -212,6 +362,9 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
                   : 'aspect-square max-w-[440px]'
               }`}
             >
+              {/* Force Inlined Font Declaration with base64 data URI to guarantee instant rendering in exported PNG */}
+              <style dangerouslySetInnerHTML={{ __html: base64FontEmbedCss }} />
+
               {/* 1. Full-Bleed Artwork Image (Original Painting Unaltered) */}
               <img
                 src={safeCoverImage}
@@ -220,12 +373,12 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
                 className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none z-0"
               />
 
-              {/* 2. Soft Bottom-Right & Top Shadows (Leaves the art subject visible on the left) */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent pointer-events-none z-10" />
+              {/* 2. Soft Bottom-Right & Top Shadows (Leaves the art subject visible on the left and bottom) */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none z-10" />
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/45 pointer-events-none z-10" />
               <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/55 to-transparent pointer-events-none z-10" />
 
-              {/* 3. Top Header Bar (LTR for numerical symmetry) */}
+              {/* 3. Top Header Bar (Branding: فِكْر وفَلْسَفَة, Strictly NO 101) */}
               <div className="absolute top-5 left-6 right-6 flex items-center justify-between z-20" dir="ltr">
                 {/* Top Left: 20 over 26 */}
                 <div className="flex flex-col text-[11px] font-bold text-white leading-tight font-sans tracking-wide select-none drop-shadow-sm">
@@ -233,24 +386,23 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
                   <span>{currentYear.slice(2, 4)}</span>
                 </div>
 
-                {/* Top Center: Fikr wa Falsafa White Logo Emblem (Geometric 101 Mark) */}
-                <div className="flex items-center gap-1.5 text-white select-none drop-shadow-sm">
-                  <svg className="w-11 h-5.5" viewBox="0 0 1838.72 834.92" fill="#FFFFFF">
-                    <rect y="29.27" width="194.1" height="194.1" />
-                    <rect x="1450.52" y="29.27" width="194.1" height="194.1" />
-                    <path d="M956.66,834.92c-230.19,0-417.46-187.28-417.46-417.46S726.48,0,956.66,0s417.46,187.27,417.46,417.46-187.28,417.46-417.46,417.46ZM956.66,195.94c-122.15,0-221.52,99.37-221.52,221.52s99.37,221.53,221.52,221.53,221.53-99.37,221.53-221.53-99.37-221.52-221.53-221.52Z" />
-                    <rect x="194.1" y="223.36" width="194.1" height="582.29" />
-                    <rect x="1644.62" y="223.36" width="194.1" height="582.29" />
-                  </svg>
+                {/* Top Center: Fikr wa Falsafa Brand Name (NO 101) */}
+                <div className="flex items-center gap-1.5 text-white select-none drop-shadow-md">
+                  <span
+                    className="font-bold text-xs sm:text-sm tracking-wide text-white drop-shadow-sm"
+                    style={{ fontFamily: "'Greta Arabic AR LT', 'GretaArabicARLT', sans-serif" }}
+                  >
+                    فِكْر وفَلْسَفَة
+                  </span>
                 </div>
 
-                {/* Top Right: Note/Article Number from Page */}
+                {/* Top Right: Article Number */}
                 <div className="text-[11px] font-mono font-bold text-white tracking-widest select-none drop-shadow-sm">
                   {articleNumber}
                 </div>
               </div>
 
-              {/* 4. Left Margin Vertical Domain: fikerwafalsafa.com */}
+              {/* 4. Left Margin Vertical Domain: fikrwfalsafa.com */}
               <div
                 className="absolute left-2.5 top-1/2 -translate-y-1/2 -rotate-90 origin-center text-[9px] tracking-widest text-white/80 font-sans select-none z-20"
                 dir="ltr"
@@ -258,69 +410,51 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
                 {siteDomain}
               </div>
 
-              {/* 5. Bottom Right Content Quadrant (RTL, exact positioning from reference) */}
+              {/* 5. Content Quadrant: Elevated Position ("Up a little not under"), RTL, NO AUTHOR NAME */}
               <div
-                className="absolute bottom-6 sm:bottom-8 right-6 sm:right-8 max-w-[62%] sm:max-w-[58%] text-right z-20 flex flex-col items-end"
+                className={`absolute ${verticalPositionClass} right-6 sm:right-8 max-w-[68%] sm:max-w-[62%] text-right z-20 flex flex-col items-end transition-all duration-300`}
                 dir="rtl"
               >
-                {/* Line 1: Category with 4-dot clover glyph */}
-                <div
-                  className="flex items-center gap-1.5 text-white text-xs sm:text-sm font-semibold mb-1 drop-shadow-sm"
-                  style={{ fontFamily: "'Greta Arabic AR LT', 'GretaArabicARLT', sans-serif" }}
-                >
-                  <span>/ {categoryName}</span>
-                  {/* 4 dots clover glyph */}
-                  <div className="grid grid-cols-2 gap-0.5 w-3 h-3">
-                    <div className="w-1 h-1 bg-white rounded-full" />
-                    <div className="w-1 h-1 bg-white rounded-full" />
-                    <div className="w-1 h-1 bg-white rounded-full" />
-                    <div className="w-1 h-1 bg-white rounded-full" />
+                {/* Line 1: Category Icon & Category Name */}
+                <div className="flex flex-col items-end mb-2.5">
+                  {/* Category Icon (aligned right, directly matching reference poster layout) */}
+                  <div className="mb-1 text-white flex items-center justify-center drop-shadow-md">
+                    {iconStyle === 'station' ? (
+                      /* 4-square icon matching reference poster */
+                      <svg viewBox="0 0 24 24" width={22} height={22} fill="white" className="drop-shadow-sm">
+                        <rect x="2.5" y="2.5" width="8" height="8" rx="3.5" />
+                        <rect x="13.5" y="2.5" width="8" height="8" rx="3.5" />
+                        <rect x="2.5" y="13.5" width="8" height="8" rx="3.5" />
+                        <rect x="13.5" y="13.5" width="8" height="8" rx="3.5" />
+                      </svg>
+                    ) : (
+                      /* Fikr wa Falsafa Category-specific SVG Icon */
+                      <CategoryIcon
+                        name={categoryName}
+                        slug={category?.slug}
+                        size={22}
+                        onDark={true}
+                        className="text-white drop-shadow-sm"
+                      />
+                    )}
+                  </div>
+
+                  {/* Category Name with Slash: / [اسم التصنيف] */}
+                  <div
+                    className="text-white/95 text-xs sm:text-sm font-semibold tracking-wide drop-shadow-sm flex items-center gap-1"
+                    style={{ fontFamily: "'Greta Arabic AR LT', 'GretaArabicARLT', sans-serif" }}
+                  >
+                    <span>/</span>
+                    <span>{categoryName}</span>
                   </div>
                 </div>
 
-                {/* Line 2: Author Name in the Authentic Arslan Wessam A Signature Font */}
+                {/* Line 2+: Arabic Paragraph / Title (Greta Arabic AR LT Bold font from reference image, NO AUTHOR NAME) */}
                 <div
-                  className="text-white text-2xl sm:text-3xl lg:text-[34px] mb-1.5 leading-none drop-shadow-sm select-none"
-                  style={{
-                    fontFamily: "'Arslan Wessam A', '(A) Arslan Wessam A (A) Arslan Wessam A', cursive",
-                  }}
+                  className="w-full text-white text-lg sm:text-2xl md:text-[26px] font-bold tracking-tight drop-shadow-md"
+                  style={{ fontFamily: "'Greta Arabic AR LT', 'GretaArabicARLT', sans-serif" }}
                 >
-                  {authorName}
-                </div>
-
-                {/* Line 3+: The Main Title with Authentic Scratches & Yellow Accents */}
-                <div className="relative text-right">
-                  <h3
-                    className="text-white text-lg sm:text-2xl font-bold leading-[1.25] tracking-tight drop-shadow-md whitespace-pre-line"
-                    style={{ fontFamily: "'Greta Arabic AR LT', 'GretaArabicARLT', sans-serif" }}
-                  >
-                    {displayText}
-                  </h3>
-
-                  {/* Hand-Drawn Yellow Scratches & Doodles */}
-                  {showDoodles && (
-                    <div className="pointer-events-none mt-1.5 flex flex-col items-end">
-                      {/* Yellow Brush Underline */}
-                      <svg className="w-36 sm:w-48 h-3.5 text-[#FDE047]" viewBox="0 0 220 14" fill="none">
-                        <path
-                          d="M 215 5 C 160 11, 70 2, 5 8"
-                          stroke="#FDE047"
-                          strokeWidth="4"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-
-                      {/* Small Doodle Sparkles / Accent near the text */}
-                      <div className="relative -mt-6 -mr-4 flex items-center gap-1">
-                        <svg className="w-6 h-6 text-[#FDE047]" viewBox="0 0 40 40" fill="none">
-                          <circle cx="20" cy="20" r="16" stroke="#FDE047" strokeWidth="2.5" strokeDasharray="90 10" />
-                          <circle cx="16" cy="16" r="2" fill="#FDE047" />
-                          <circle cx="24" cy="16" r="2" fill="#FDE047" />
-                          <path d="M 15 25 Q 20 28, 25 25" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
-                        </svg>
-                      </div>
-                    </div>
-                  )}
+                  {renderParagraphContent()}
                 </div>
               </div>
             </div>
@@ -369,11 +503,11 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
           </div>
 
           {/* Right Column: Customization Controls (5 cols) */}
-          <div className="lg:col-span-5 space-y-5">
+          <div className="lg:col-span-5 space-y-4">
             {/* 1. Mode Switch: Title vs Excerpt */}
             <div>
-              <label className="block text-xs font-bold text-neutral-300 mb-2">
-                نص البوستر الرئيسي:
+              <label className="block text-xs font-bold text-neutral-300 mb-1.5">
+                النص العربي على البوستر:
               </label>
               <div className="grid grid-cols-2 gap-2 bg-[#0d1322] p-1 rounded-xl border border-neutral-800">
                 <button
@@ -406,8 +540,8 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
 
             {/* 2. Textarea to edit title/quote */}
             <div>
-              <label className="block text-xs font-bold text-neutral-300 mb-1.5">
-                تعديل النص المعروض على البوستر:
+              <label className="block text-xs font-bold text-neutral-300 mb-1">
+                تعديل نص المقال (بخط Greta Arabic AR LT):
               </label>
               <textarea
                 value={displayText}
@@ -429,11 +563,113 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
               </div>
             </div>
 
-            {/* 3. Doodles & Highlight Accents Toggle */}
-            <div className="bg-[#0d1322] p-3.5 rounded-xl border border-neutral-800 flex items-center justify-between">
+            {/* 3. Vertical Position Control ("make it Up a little not under") */}
+            <div>
+              <label className="block text-xs font-bold text-neutral-300 mb-1.5 flex items-center gap-1">
+                <ArrowUpCircle size={14} className="text-[#FDE047]" />
+                <span>موضع النص الرأسي (رفع النص للأعلى):</span>
+              </label>
+              <div className="grid grid-cols-3 gap-1.5 bg-[#0d1322] p-1 rounded-xl border border-neutral-800 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setVerticalPosition('high')}
+                  className={`py-1.5 px-2 rounded-lg font-bold transition-all cursor-pointer ${
+                    verticalPosition === 'high'
+                      ? 'bg-[#FDE047] text-black shadow-xs'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  مرتفع (مطابق للصورة)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVerticalPosition('ultra')}
+                  className={`py-1.5 px-2 rounded-lg font-bold transition-all cursor-pointer ${
+                    verticalPosition === 'ultra'
+                      ? 'bg-[#FDE047] text-black shadow-xs'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  مرتفع جداً
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVerticalPosition('mid')}
+                  className={`py-1.5 px-2 rounded-lg font-bold transition-all cursor-pointer ${
+                    verticalPosition === 'mid'
+                      ? 'bg-[#FDE047] text-black shadow-xs'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  وسط
+                </button>
+              </div>
+            </div>
+
+            {/* 4. Category Icon Style Selector */}
+            <div>
+              <label className="block text-xs font-bold text-neutral-300 mb-1.5 flex items-center gap-1">
+                <Shapes size={14} className="text-[#FDE047]" />
+                <span>شكل أيقونة التصنيف:</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2 bg-[#0d1322] p-1 rounded-xl border border-neutral-800 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setIconStyle('station')}
+                  className={`py-1.5 px-2.5 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    iconStyle === 'station'
+                      ? 'bg-neutral-800 text-white border border-neutral-700 shadow-xs'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  <span className="text-base leading-none">✣</span>
+                  <span>المستوحاة من الصورة (4 مربعات)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIconStyle('category')}
+                  className={`py-1.5 px-2.5 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    iconStyle === 'category'
+                      ? 'bg-neutral-800 text-white border border-neutral-700 shadow-xs'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  <span>أيقونة التصنيف ({categoryName})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 5. Interactive Word Selector for Yellow Loop Highlight */}
+            {showDoodles && wordsList.length > 0 && (
+              <div>
+                <label className="block text-xs font-bold text-neutral-300 mb-1.5">
+                  الكلمة المحاطة بالدائرة الصفراء:
+                </label>
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 bg-[#0d1322] rounded-xl border border-neutral-800">
+                  {wordsList.map((w, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setHighlightKeyword(w)}
+                      className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                        highlightKeyword === w
+                          ? 'bg-[#FDE047] text-black font-extrabold shadow-xs'
+                          : 'bg-neutral-800 text-neutral-300 hover:text-white'
+                      }`}
+                      style={{ fontFamily: "'Greta Arabic AR LT', 'GretaArabicARLT', sans-serif" }}
+                    >
+                      {w}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 6. Doodles & Scratches Toggle */}
+            <div className="bg-[#0d1322] p-3 rounded-xl border border-neutral-800 flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-white block">
-                  الخط الأصفر واللمسات التعبيرية
+                  الخط الأصفر واللمسات الفنية
                 </span>
                 <span className="text-[11px] text-neutral-400 block mt-0.5">
                   رسم خط يدوي أصفر وحركات تعبيرية كما في الصورة المرجعية
@@ -455,7 +691,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
               </button>
             </div>
 
-            {/* 4. Download High-Res PNG Button */}
+            {/* 7. Download High-Res PNG Button */}
             <div>
               <button
                 type="button"
@@ -480,9 +716,9 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
               </span>
             </div>
 
-            {/* 5. Direct Social Links & Copy */}
-            <div className="pt-3 border-t border-neutral-800/80">
-              <span className="text-xs font-bold text-neutral-300 block mb-2.5">
+            {/* 8. Direct Social Links & Copy */}
+            <div className="pt-2.5 border-t border-neutral-800/80">
+              <span className="text-xs font-bold text-neutral-300 block mb-2">
                 مشاركة سريعة مع الرابط:
               </span>
 
@@ -490,7 +726,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
                 <button
                   type="button"
                   onClick={handleShareTwitter}
-                  className="py-2.5 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -501,7 +737,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
                 <button
                   type="button"
                   onClick={handleShareWhatsApp}
-                  className="py-2.5 px-3 rounded-xl bg-[#075e54]/30 hover:bg-[#075e54]/50 border border-[#25D366]/40 text-[#25D366] text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="py-2 px-3 rounded-xl bg-[#075e54]/30 hover:bg-[#075e54]/50 border border-[#25D366]/40 text-[#25D366] text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />

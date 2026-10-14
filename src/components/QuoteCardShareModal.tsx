@@ -50,7 +50,8 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
   const [isUsingTitle, setIsUsingTitle] = useState(true);
   const [aspectRatio, setAspectRatio] = useState<'portrait' | 'story' | 'square'>('portrait');
   const [verticalPosition, setVerticalPosition] = useState<'high' | 'ultra' | 'mid'>('high');
-  const [iconStyle, setIconStyle] = useState<'station' | 'category'>('station');
+  const [iconStyle, setIconStyle] = useState<'category' | 'station'>('category');
+  const [iconLayout, setIconLayout] = useState<'inline' | 'stacked'>('inline');
   const [highlightKeyword, setHighlightKeyword] = useState<string>('');
   const [showDoodles, setShowDoodles] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -412,42 +413,73 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
 
               {/* 5. Content Quadrant: Elevated Position ("Up a little not under"), RTL, NO AUTHOR NAME */}
               <div
-                className={`absolute ${verticalPositionClass} right-6 sm:right-8 max-w-[68%] sm:max-w-[62%] text-right z-20 flex flex-col items-end transition-all duration-300`}
+                className={`absolute ${verticalPositionClass} right-6 sm:right-8 max-w-[68%] sm:max-w-[62%] text-right z-20 flex flex-col items-start transition-all duration-300`}
                 dir="rtl"
               >
-                {/* Line 1: Category Icon & Category Name */}
-                <div className="flex flex-col items-end mb-2.5">
-                  {/* Category Icon (aligned right, directly matching reference poster layout) */}
-                  <div className="mb-1 text-white flex items-center justify-center drop-shadow-md">
-                    {iconStyle === 'station' ? (
-                      /* 4-square icon matching reference poster */
-                      <svg viewBox="0 0 24 24" width={22} height={22} fill="white" className="drop-shadow-sm">
-                        <rect x="2.5" y="2.5" width="8" height="8" rx="3.5" />
-                        <rect x="13.5" y="2.5" width="8" height="8" rx="3.5" />
-                        <rect x="2.5" y="13.5" width="8" height="8" rx="3.5" />
-                        <rect x="13.5" y="13.5" width="8" height="8" rx="3.5" />
-                      </svg>
-                    ) : (
-                      /* Fikr wa Falsafa Category-specific SVG Icon */
-                      <CategoryIcon
-                        name={categoryName}
-                        slug={category?.slug}
-                        size={22}
-                        onDark={true}
-                        className="text-white drop-shadow-sm"
-                      />
-                    )}
+                {/* Line 1: Category Icon & Category Name in strict RTL (Icon on the FAR RIGHT) */}
+                {iconLayout === 'stacked' ? (
+                  <div className="w-full flex flex-col items-start justify-start mb-2.5 text-right select-none" dir="rtl">
+                    <div className="mb-1 text-white shrink-0 flex items-center justify-start drop-shadow-md">
+                      {iconStyle === 'station' ? (
+                        <svg viewBox="0 0 24 24" width={22} height={22} fill="white" className="drop-shadow-sm">
+                          <rect x="2.5" y="2.5" width="8" height="8" rx="3.5" />
+                          <rect x="13.5" y="2.5" width="8" height="8" rx="3.5" />
+                          <rect x="2.5" y="13.5" width="8" height="8" rx="3.5" />
+                          <rect x="13.5" y="13.5" width="8" height="8" rx="3.5" />
+                        </svg>
+                      ) : (
+                        <CategoryIcon
+                          name={categoryName}
+                          slug={category?.slug}
+                          size={22}
+                          onDark={true}
+                          className="text-white drop-shadow-sm"
+                        />
+                      )}
+                    </div>
+                    <div
+                      className="text-white/95 text-xs sm:text-sm font-semibold tracking-wide drop-shadow-sm flex items-center justify-start gap-1"
+                      style={{ fontFamily: "'Greta Arabic AR LT', 'GretaArabicARLT', sans-serif" }}
+                    >
+                      <span>/</span>
+                      <span>{categoryName}</span>
+                    </div>
                   </div>
-
-                  {/* Category Name with Slash: / [اسم التصنيف] */}
+                ) : (
                   <div
-                    className="text-white/95 text-xs sm:text-sm font-semibold tracking-wide drop-shadow-sm flex items-center gap-1"
-                    style={{ fontFamily: "'Greta Arabic AR LT', 'GretaArabicARLT', sans-serif" }}
+                    className="w-full flex items-center justify-start gap-2 mb-2.5 text-right select-none"
+                    dir="rtl"
                   >
-                    <span>/</span>
-                    <span>{categoryName}</span>
+                    {/* Category Icon on the FAR RIGHT in RTL */}
+                    <div className="text-white shrink-0 flex items-center justify-center drop-shadow-md">
+                      {iconStyle === 'station' ? (
+                        <svg viewBox="0 0 24 24" width={22} height={22} fill="white" className="drop-shadow-sm">
+                          <rect x="2.5" y="2.5" width="8" height="8" rx="3.5" />
+                          <rect x="13.5" y="2.5" width="8" height="8" rx="3.5" />
+                          <rect x="2.5" y="13.5" width="8" height="8" rx="3.5" />
+                          <rect x="13.5" y="13.5" width="8" height="8" rx="3.5" />
+                        </svg>
+                      ) : (
+                        <CategoryIcon
+                          name={categoryName}
+                          slug={category?.slug}
+                          size={22}
+                          onDark={true}
+                          className="text-white drop-shadow-sm"
+                        />
+                      )}
+                    </div>
+
+                    {/* Slash and Category Name */}
+                    <div
+                      className="text-white/95 text-xs sm:text-sm font-semibold tracking-wide drop-shadow-sm flex items-center gap-1"
+                      style={{ fontFamily: "'Greta Arabic AR LT', 'GretaArabicARLT', sans-serif" }}
+                    >
+                      <span>/</span>
+                      <span>{categoryName}</span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Line 2+: Arabic Paragraph / Title (Greta Arabic AR LT Bold font from reference image, NO AUTHOR NAME) */}
                 <div
@@ -606,35 +638,70 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
               </div>
             </div>
 
-            {/* 4. Category Icon Style Selector */}
+            {/* 4. Category Icon Style Selector in RTL */}
             <div>
-              <label className="block text-xs font-bold text-neutral-300 mb-1.5 flex items-center gap-1">
+              <label className="block text-xs font-bold text-neutral-300 mb-1.5 flex items-center gap-1" dir="rtl">
                 <Shapes size={14} className="text-[#FDE047]" />
                 <span>شكل أيقونة التصنيف:</span>
               </label>
-              <div className="grid grid-cols-2 gap-2 bg-[#0d1322] p-1 rounded-xl border border-neutral-800 text-xs">
+              <div className="grid grid-cols-2 gap-2 bg-[#0d1322] p-1 rounded-xl border border-neutral-800 text-xs" dir="rtl">
+                <button
+                  type="button"
+                  onClick={() => setIconStyle('category')}
+                  className={`py-2 px-2.5 rounded-lg font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    iconStyle === 'category'
+                      ? 'bg-[#FDE047] text-black font-extrabold shadow-xs'
+                      : 'text-neutral-300 hover:text-white bg-neutral-800/80'
+                  }`}
+                  dir="rtl"
+                >
+                  <CategoryIcon
+                    name={categoryName}
+                    slug={category?.slug}
+                    size={16}
+                    onDark={iconStyle !== 'category'}
+                  />
+                  <span>أيقونة التصنيف ({categoryName})</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setIconStyle('station')}
-                  className={`py-1.5 px-2.5 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`py-2 px-2.5 rounded-lg font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     iconStyle === 'station'
-                      ? 'bg-neutral-800 text-white border border-neutral-700 shadow-xs'
-                      : 'text-neutral-400 hover:text-white'
+                      ? 'bg-[#FDE047] text-black font-extrabold shadow-xs'
+                      : 'text-neutral-300 hover:text-white bg-neutral-800/80'
                   }`}
+                  dir="rtl"
                 >
                   <span className="text-base leading-none">✣</span>
                   <span>المستوحاة من الصورة (4 مربعات)</span>
                 </button>
+              </div>
+
+              {/* Sub-selector: Category icon layout (Inline RTL vs Stacked RTL) */}
+              <div className="grid grid-cols-2 gap-2 mt-2 bg-[#070b13] p-1 rounded-lg border border-neutral-800/60 text-[11px]" dir="rtl">
                 <button
                   type="button"
-                  onClick={() => setIconStyle('category')}
-                  className={`py-1.5 px-2.5 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    iconStyle === 'category'
-                      ? 'bg-neutral-800 text-white border border-neutral-700 shadow-xs'
-                      : 'text-neutral-400 hover:text-white'
+                  onClick={() => setIconLayout('inline')}
+                  className={`py-1.5 px-2 rounded-md font-bold transition-all cursor-pointer ${
+                    iconLayout === 'inline'
+                      ? 'bg-neutral-700 text-white shadow-xs'
+                      : 'text-neutral-400 hover:text-neutral-200'
                   }`}
                 >
-                  <span>أيقونة التصنيف ({categoryName})</span>
+                  بجانب الاسم (مضمن RTL)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIconLayout('stacked')}
+                  className={`py-1.5 px-2 rounded-md font-bold transition-all cursor-pointer ${
+                    iconLayout === 'stacked'
+                      ? 'bg-neutral-700 text-white shadow-xs'
+                      : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  فوق الاسم (مكدس RTL)
                 </button>
               </div>
             </div>

@@ -351,11 +351,11 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
               </span>
             </div>
 
-            {/* The Live Visual Card Container */}
+            {/* The Live Visual Card Container (Sharp rectangular edges, NOT rounded) */}
             <div
               ref={cardRef}
               dir="rtl"
-              className={`relative w-full rounded-xl overflow-hidden shadow-2xl transition-all duration-300 select-none bg-neutral-900 ${
+              className={`relative w-full rounded-none overflow-hidden shadow-2xl transition-all duration-300 select-none bg-neutral-900 ${
                 aspectRatio === 'portrait'
                   ? 'aspect-[4/5] max-w-[440px]'
                   : aspectRatio === 'story'

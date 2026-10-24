@@ -35,6 +35,7 @@ export interface Article {
   excerpt: string;
   body: string; // Rich formatted text with markdown or HTML
   coverImage: string;
+  cover?: string; // Compatibility alias for cover image
   authorId: string;
   categorySlug: string;
   wordCount: number; // Arabic word count

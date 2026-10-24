@@ -45,9 +45,9 @@ export const YAHIA_NAIM_AUTHOR: Author = {
   email: 'mailto:yahyanaim2001@gmail.com',
 };
 
-const ARTICLES_STORAGE_KEY = 'fiker_articles_v5';
-const AUTHORS_STORAGE_KEY = 'fiker_authors_v5';
-const NEWSLETTER_STORAGE_KEY = 'fiker_newsletter_v5';
+const ARTICLES_STORAGE_KEY = 'fiker_articles_v6';
+const AUTHORS_STORAGE_KEY = 'fiker_authors_v6';
+const NEWSLETTER_STORAGE_KEY = 'fiker_newsletter_v6';
 
 export function ArticlesProvider({ children }: { children: ReactNode }) {
   const [articles, setArticles] = useState<Article[]>(initialArticles);
@@ -55,15 +55,16 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
   const [newsletterSubscribers, setNewsletterSubscribers] = useState<NewsletterSubscriber[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize from LocalStorage and purge any outdated legacy cached authors
+  // Initialize from LocalStorage and guarantee authentic artwork and author
   useEffect(() => {
     try {
-      // Purge old legacy keys that might contain obsolete authors
+      // Purge old legacy keys that might contain obsolete cached data
       const legacyKeys = [
         'fiker_articles_v1', 'fiker_authors_v1', 'fiker_newsletter_v1',
         'fiker_articles_v2', 'fiker_authors_v2',
         'fiker_articles_v3', 'fiker_authors_v3',
         'fiker_articles_v4', 'fiker_authors_v4',
+        'fiker_articles_v5', 'fiker_authors_v5', 'fiker_newsletter_v5',
       ];
       legacyKeys.forEach((key) => {
         try {
@@ -81,18 +82,39 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
       if (storedArticles) {
         try {
           const parsed = JSON.parse(storedArticles);
-          // Sanitize every article so authorId is strictly Yahia Naim
-          const sanitized = parsed.map((a: Article) => ({
-            ...a,
-            authorId: 'author-yahia-naim',
-            author: 'يحيى نعيم',
-            authorSlug: 'yahia-naim',
-          }));
+          const initialMap = new Map<string, Article>();
+          initialArticles.forEach((initArt) => {
+            if (initArt.id) initialMap.set(String(initArt.id).toLowerCase(), initArt);
+            if (initArt.slug) initialMap.set(String(initArt.slug).toLowerCase(), initArt);
+          });
+
+          // Sanitize every article so authorId is strictly Yahia Naim and authentic artwork is preserved
+          const sanitized = parsed.map((a: Article) => {
+            const matched =
+              initialMap.get(String(a.id || '').toLowerCase()) ||
+              (a.slug ? initialMap.get(String(a.slug).toLowerCase()) : undefined);
+            const coverImage =
+              matched?.coverImage ||
+              (matched as any)?.cover ||
+              a.coverImage ||
+              (a as any).cover ||
+              '';
+            return {
+              ...a,
+              coverImage,
+              cover: coverImage,
+              authorId: 'author-yahia-naim',
+              author: 'يحيى نعيم',
+              authorSlug: 'yahia-naim',
+            };
+          });
+
           const existingIds = new Set(sanitized.map((a: Article) => a.id));
           const missing = initialArticles
             .filter((a) => !existingIds.has(a.id))
             .map((a) => ({
               ...a,
+              cover: a.coverImage,
               authorId: 'author-yahia-naim',
               author: 'يحيى نعيم',
               authorSlug: 'yahia-naim',

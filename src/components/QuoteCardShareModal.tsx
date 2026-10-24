@@ -61,13 +61,14 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Derive proxy safe cover image URL to avoid CORS tainting during export
+  const rawCover = article.coverImage || (article as any).cover || '';
   const safeCoverImage = useMemo(() => {
-    if (!article.coverImage) return '/file.svg';
-    if (article.coverImage.startsWith('http://') || article.coverImage.startsWith('https://')) {
-      return `/api/proxy-image?url=${encodeURIComponent(article.coverImage)}`;
+    if (!rawCover) return '/file.svg';
+    if (rawCover.startsWith('http://') || rawCover.startsWith('https://')) {
+      return `/api/proxy-image?url=${encodeURIComponent(rawCover)}`;
     }
-    return article.coverImage;
-  }, [article.coverImage]);
+    return rawCover;
+  }, [rawCover]);
 
   // Ensure Greta Arabic Bold font is registered and ready in document.fonts
   useEffect(() => {
@@ -371,6 +372,11 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
                 src={safeCoverImage}
                 alt={article.title}
                 crossOrigin="anonymous"
+                onError={(e) => {
+                  if (rawCover && e.currentTarget.src !== rawCover) {
+                    e.currentTarget.src = rawCover;
+                  }
+                }}
                 className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none z-0"
               />
 

@@ -123,7 +123,7 @@ export default function ArticlePage({ params }: PageProps) {
           <div
             className="top-section-container relative w-full pt-[65px] md:pt-[80px] lg:pt-[90px] min-h-[280px] md:min-h-[580px] lg:min-h-[660px] xl:min-h-[740px] flex flex-col justify-between overflow-hidden bg-cover bg-center"
             style={{
-              backgroundImage: `url(${article.coverImage})`,
+              backgroundImage: `url(${article.coverImage || (article as any).cover || ''})`,
             }}
           >
             {/* Subtle dark tint over image for contrast */}

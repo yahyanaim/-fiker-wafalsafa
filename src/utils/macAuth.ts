@@ -89,3 +89,19 @@ export function revokeMacAuthorization(): void {
     }
   }
 }
+
+/**
+ * Checks whether the current user is an authenticated administrator.
+ * Returns true if authenticated via passcode or on an authorized admin device.
+ */
+export function isAdminUser(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const isAuth = localStorage.getItem('fiker_admin_authenticated') === 'true';
+    const isMacAuth = isUserMacAuthorized();
+    return isAuth || isMacAuth;
+  } catch {
+    return false;
+  }
+}
+

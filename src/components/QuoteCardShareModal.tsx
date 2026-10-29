@@ -21,6 +21,7 @@ import {
   Shapes
 } from 'lucide-react';
 import { GRETA_BOLD_BASE64 } from '@/utils/gretaBoldBase64';
+import { isAdminUser } from '@/utils/macAuth';
 
 interface QuoteCardShareModalProps {
   article: Article;
@@ -57,6 +58,13 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsAdmin(isAdminUser());
+    }
+  }, [isOpen]);
 
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -123,7 +131,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
     }`;
   }, []);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isAdmin) return null;
 
   const showToast = (msg: string) => {
     setToastMsg(msg);

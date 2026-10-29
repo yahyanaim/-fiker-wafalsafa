@@ -12,6 +12,7 @@ import { ArticleBodyRenderer } from '@/components/ArticleBodyRenderer';
 import { ArticleCard } from '@/components/ArticleCard';
 import { formatWordCountBadge } from '@/utils/arabic';
 import { QuoteCardShareModal } from '@/components/QuoteCardShareModal';
+import { isAdminUser } from '@/utils/macAuth';
 import { Sparkles, Image as ImageIcon } from 'lucide-react';
 
 interface PageProps {
@@ -27,10 +28,12 @@ export default function ArticlePage({ params }: PageProps) {
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setShareUrl(window.location.href);
+      setIsAdmin(isAdminUser());
     }
   }, []);
 
@@ -211,14 +214,16 @@ export default function ArticlePage({ params }: PageProps) {
             </div>
 
             <div className="side-btns article-body flex items-center gap-3">
-              <button
-                onClick={() => setIsQuoteModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0a1226] text-[#FACC15] hover:bg-[#152347] hover:scale-105 text-xs font-bold transition-all shadow-sm cursor-pointer"
-                title="معاينة وتصميم بطاقة الاقتباس مع صورة المقال للمشاركة"
-              >
-                <Sparkles size={13} />
-                <span>بطاقة الاقتباس والصورة</span>
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setIsQuoteModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0a1226] text-[#FACC15] hover:bg-[#152347] hover:scale-105 text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  title="لوحة الإدارة: معاينة وتصميم بطاقة الاقتباس مع صورة المقال للمشاركة"
+                >
+                  <Sparkles size={13} />
+                  <span>بطاقة الاقتباس والصورة (مشرف)</span>
+                </button>
+              )}
 
               <button
                 onClick={handleShare}
@@ -354,30 +359,37 @@ export default function ArticlePage({ params }: PageProps) {
                 </li>
               </ul>
 
-              {/* Quote & Photo Social Preview Card Banner */}
-              <div className="mt-5 p-4 rounded-xl bg-gradient-to-r from-[#0a1226]/8 to-[#0a1226]/3 border border-[#0a1226]/15 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items-center gap-3 text-right">
-                  <div className="w-10 h-10 rounded-full bg-[#0a1226] text-[#FACC15] flex items-center justify-center shrink-0">
-                    <Sparkles size={18} />
+              {/* Quote & Photo Social Preview Card Banner (Admin Only) */}
+              {isAdmin && (
+                <div className="mt-5 p-4 rounded-xl bg-gradient-to-r from-[#0a1226]/8 to-[#0a1226]/3 border border-[#0a1226]/15 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 text-right">
+                    <div className="w-10 h-10 rounded-full bg-[#0a1226] text-[#FACC15] flex items-center justify-center shrink-0">
+                      <Sparkles size={18} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs sm:text-sm font-bold text-[#0a1226]">
+                          معاينة بطاقة الاقتباس والصورة للمشاركة
+                        </h4>
+                        <span className="text-[10px] font-bold bg-[#FACC15]/40 text-[#0a1226] px-1.5 py-0.5 rounded">
+                          إدارة
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-neutral-500">
+                        صمم بوستر وبطاقة أنيقة باللوحة واقتباس المقال وحملها كصورة (PNG) للإنستجرام وتويتر
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-bold text-[#0a1226]">
-                      معاينة بطاقة الاقتباس والصورة للمشاركة
-                    </h4>
-                    <p className="text-[11px] text-neutral-500">
-                      صمم بطاقة أنيقة بالصورة واقتباس المقال وحملها كصورة (PNG) للإنستجرام وتويتر
-                    </p>
-                  </div>
-                </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsQuoteModalOpen(true)}
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#0a1226] hover:bg-[#152347] text-[#FACC15] text-xs font-bold transition-all shadow-sm cursor-pointer whitespace-nowrap"
-                >
-                  فتح بطاقة الاقتباس
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsQuoteModalOpen(true)}
+                    className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#0a1226] hover:bg-[#152347] text-[#FACC15] text-xs font-bold transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                  >
+                    فتح بطاقة الاقتباس
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -500,8 +512,8 @@ export default function ArticlePage({ params }: PageProps) {
         )}
       </main>
 
-      {/* Quote Card Share Modal */}
-      {article && (
+      {/* Quote Card Share Modal (Restricted to Admin Only) */}
+      {isAdmin && article && (
         <QuoteCardShareModal
           article={article}
           isOpen={isQuoteModalOpen}

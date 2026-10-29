@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { isUserMacAuthorized, MAC_AUTH_KEY, MAC_AUTH_SECRET_TOKEN, MAC_UNLOCK_PARAM } from '@/utils/macAuth';
 import { NotFoundView } from '@/components/NotFoundView';
+import { QuoteCardShareModal } from '@/components/QuoteCardShareModal';
 
 const COVER_PRESETS = [
   {
@@ -92,6 +93,7 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [passcode, setPasscode] = useState('');
   const [authError, setAuthError] = useState(false);
+  const [quoteModalArticle, setQuoteModalArticle] = useState<Article | null>(null);
 
   // Yahia Naim Social Media Links State
   const [socialLinks, setSocialLinks] = useState({
@@ -671,6 +673,14 @@ export default function AdminPage() {
                           </td>
                           <td className="p-4 text-center">
                             <div className="flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setQuoteModalArticle(art)}
+                                className="p-1.5 hover:bg-neutral-200 text-[#0a1226] hover:text-[#b45309] transition-colors rounded"
+                                title="تصميم وتنزيل بطاقة الاقتباس والصورة"
+                              >
+                                <Sparkles size={16} />
+                              </button>
                               <button
                                 onClick={() => startEdit(art)}
                                 className="p-1.5 hover:bg-neutral-200 text-black transition-colors"
@@ -1404,6 +1414,14 @@ export default function AdminPage() {
           )}
         </div>
       </main>
+
+      {quoteModalArticle && (
+        <QuoteCardShareModal
+          article={quoteModalArticle}
+          isOpen={!!quoteModalArticle}
+          onClose={() => setQuoteModalArticle(null)}
+        />
+      )}
 
       <Footer />
     </div>

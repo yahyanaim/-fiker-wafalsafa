@@ -19,10 +19,10 @@ export const authors: Author[] = [
   },
 ];
 
-export const getAuthorById = (id: string): Author | undefined => {
+export const getAuthorById = (): Author | undefined => {
   return authors[0];
 };
 
-export const getAuthorBySlug = (slug: string): Author | undefined => {
+export const getAuthorBySlug = (): Author | undefined => {
   return authors[0];
 };

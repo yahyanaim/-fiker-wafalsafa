@@ -87,7 +87,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
           ) : filteredArticles.length === 0 ? (
             <div className="py-12 text-center text-neutral-400">
               <BookOpen size={36} className="mx-auto mb-3 opacity-40 text-neutral-500" />
-              <p className="text-base text-neutral-400">لم نجد مقالات تطابق "{query}"</p>
+              <p className="text-base text-neutral-400">لم نجد مقالات تطابق &quot;{query}&quot;</p>
               <p className="text-xs text-neutral-500 mt-1">جرّب البحث بكلمات أبسط أو تصفح المحطات الزمنية</p>
             </div>
           ) : (

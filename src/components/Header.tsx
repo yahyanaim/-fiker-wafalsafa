@@ -7,6 +7,7 @@ import { NewsletterModal } from './NewsletterModal';
 import { SearchModal } from './SearchModal';
 import { Logo } from './Logo';
 import { X, Compass, Clock, Users, ShieldCheck } from 'lucide-react';
+import { fetchAdminStatus } from '@/utils/macAuth';
 
 export const Header: React.FC = () => {
   const [isNewsletterOpen, setIsNewsletterOpen] = useState(false);
@@ -16,16 +17,14 @@ export const Header: React.FC = () => {
   const [showAdminLink, setShowAdminLink] = useState(false);
 
   useEffect(() => {
-    // Check if on Yahia's Mac / authorized device
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local');
-      const hasToken = localStorage.getItem('fiker_authorized_mac_device') === 'authorized_mac_yahia_2026' ||
-                        localStorage.getItem('fiker_authorized_mac_device') === 'authorized_mac_yahia';
-      if (isLocal || hasToken) {
-        setShowAdminLink(true);
-      }
-    }
+    // Check (on the server) if this is Yahia's Mac / an authorized device
+    let cancelled = false;
+    fetchAdminStatus().then((status) => {
+      if (!cancelled && status.deviceAuthorized) setShowAdminLink(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const navLinks = [

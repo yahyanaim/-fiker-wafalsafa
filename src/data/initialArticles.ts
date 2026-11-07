@@ -100,7 +100,24 @@ const rawArticles = [
 const homeArticlesList: Article[] = [];
 const seenSlugs = new Set<string>();
 
-const addHomeItem = (item: any, defaultCat: string) => {
+interface HomeItem {
+  id?: string | number;
+  slug?: string;
+  title?: string;
+  brief?: string;
+  cover?: string;
+  words?: number;
+  categorySlug?: string;
+  categoryName?: string;
+}
+
+interface HomeSection {
+  categorySlug: string;
+  banner?: HomeItem;
+  posts?: HomeItem[];
+}
+
+const addHomeItem = (item: HomeItem | null | undefined, defaultCat: string) => {
   if (!item || !item.title) return;
   const slug = item.slug || String(item.id);
   if (seenSlugs.has(slug)) return;
@@ -135,10 +152,10 @@ if (homeData.topTeaser) {
   addHomeItem(homeData.topTeaser, 'philosophy');
 }
 
-homeData.sections.forEach((s: any) => {
+(homeData.sections as HomeSection[]).forEach((s) => {
   if (s.banner) addHomeItem(s.banner, s.categorySlug);
   if (Array.isArray(s.posts)) {
-    s.posts.forEach((p: any) => addHomeItem(p, s.categorySlug));
+    s.posts.forEach((p) => addHomeItem(p, s.categorySlug));
   }
 });
 

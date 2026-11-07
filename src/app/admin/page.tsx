@@ -12,15 +12,10 @@ import { countArabicWords, toArabicNumerals } from '@/utils/arabic';
 import { optimizeImageFile } from '@/utils/image';
 import { Article } from '@/types';
 import {
-  PenTool,
-  List,
-  Mail,
   Plus,
   Trash2,
   Edit,
-  Eye,
   CheckCircle,
-  Clock,
   Bold,
   Italic,
   Quote,
@@ -31,21 +26,22 @@ import {
   Lock,
   LogOut,
   ShieldCheck,
-  Check,
   Upload,
   ImageIcon,
-  Link2,
   X,
   Loader2,
   Laptop,
-  Globe,
   Share2,
   Copy,
-  Key
 } from 'lucide-react';
-import { isUserMacAuthorized, MAC_AUTH_KEY, MAC_AUTH_SECRET_TOKEN, MAC_UNLOCK_PARAM } from '@/utils/macAuth';
+import { fetchAdminStatus, loginAdmin, logoutAdmin } from '@/utils/macAuth';
 import { NotFoundView } from '@/components/NotFoundView';
-import { QuoteCardShareModal } from '@/components/QuoteCardShareModal';
+import dynamic from 'next/dynamic';
+
+const QuoteCardShareModal = dynamic(
+  () => import('@/components/QuoteCardShareModal').then((m) => m.QuoteCardShareModal),
+  { ssr: false }
+);
 
 const COVER_PRESETS = [
   {
@@ -78,12 +74,13 @@ export default function AdminPage() {
   const {
     articles,
     categories,
-    authors,
     newsletterSubscribers,
+    socialLinks: contextSocialLinks,
     createArticle,
     updateArticle,
     deleteArticle,
     toggleArticlePublish,
+    updateSocialLinks,
   } = useArticles();
 
   // Mac Device Authorization State (Restricted to Yahia's Mac only)
@@ -96,43 +93,31 @@ export default function AdminPage() {
   const [quoteModalArticle, setQuoteModalArticle] = useState<Article | null>(null);
 
   // Yahia Naim Social Media Links State
-  const [socialLinks, setSocialLinks] = useState({
-    twitter: 'https://x.com/yahia_naim',
-    instagram: 'https://instagram.com/yahia_naim',
-    facebook: 'https://facebook.com/yahia.naim',
-    linkedin: 'https://linkedin.com/in/yahyanaim',
-    github: 'https://github.com/yahyanaim',
-    email: 'yahyanaim2001@gmail.com',
-  });
+  const [socialLinks, setSocialLinks] = useState(contextSocialLinks);
 
   useEffect(() => {
-    // 1. Verify if device is Yahia's Mac or authorized
-    const isAuthorized = isUserMacAuthorized();
-    setIsMacAuthorized(isAuthorized);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSocialLinks(contextSocialLinks);
+  }, [contextSocialLinks]);
 
-    // 2. Check login session
-    const authStatus = localStorage.getItem('fiker_admin_authenticated');
-    if (authStatus === 'true') {
-      setIsAuthenticated(true);
-    }
-
-    // 3. Load saved social links
-    try {
-      const saved = localStorage.getItem('fiker_yahia_social_links');
-      if (saved) {
-        setSocialLinks(JSON.parse(saved));
-      }
-    } catch {
-      // ignore
-    }
+  useEffect(() => {
+    let cancelled = false;
+    // 1 + 2. Device authorization and login session are verified on the server
+    fetchAdminStatus().then((status) => {
+      if (cancelled) return;
+      setIsMacAuthorized(status.deviceAuthorized);
+      setIsAuthenticated(status.authenticated);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Default admin passcode: admin101 or admin
-    if (passcode.trim() === 'admin101' || passcode.trim() === 'admin') {
+    const ok = await loginAdmin(passcode.trim());
+    if (ok) {
       setIsAuthenticated(true);
-      localStorage.setItem('fiker_admin_authenticated', 'true');
       setAuthError(false);
       setPasscode('');
     } else {
@@ -140,15 +125,15 @@ export default function AdminPage() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsAuthenticated(false);
-    localStorage.removeItem('fiker_admin_authenticated');
+    await logoutAdmin();
   };
 
   const handleSaveSocialLinks = (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      localStorage.setItem('fiker_yahia_social_links', JSON.stringify(socialLinks));
+      updateSocialLinks(socialLinks);
       showToast('تم حفظ وتحديث روابط التواصل الاجتماعي بنجاح!');
     } catch {
       showToast('حدث خطأ أثناء حفظ الروابط');
@@ -184,6 +169,7 @@ export default function AdminPage() {
     try {
       const saved = localStorage.getItem('fiker_uploaded_photos');
       if (saved) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setUploadedPhotos(JSON.parse(saved));
       }
     } catch {
@@ -221,8 +207,8 @@ export default function AdminPage() {
         return next;
       });
       showToast('تم رفع الصورة بنجاح وتعيينها كغلاف');
-    } catch (err: any) {
-      showToast(err?.message || 'فشل في رفع الصورة');
+    } catch (err: unknown) {
+      showToast((err instanceof Error && err.message) || 'فشل في رفع الصورة');
     } finally {
       setIsUploading(false);
       if (e.target) e.target.value = '';
@@ -277,8 +263,8 @@ export default function AdminPage() {
       const optimized = await optimizeImageFile(file);
       setInTextImageSrc(optimized);
       showToast('تم تجهيز الصورة للإدراج');
-    } catch (err: any) {
-      showToast(err?.message || 'فشل في قراءة الصورة');
+    } catch (err: unknown) {
+      showToast((err instanceof Error && err.message) || 'فشل في قراءة الصورة');
     } finally {
       setIsUploading(false);
       if (e.target) e.target.value = '';
@@ -450,7 +436,7 @@ export default function AdminPage() {
                   dir="ltr"
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
-                  placeholder="أدخل كلمة المرور (الافتراضية: admin101)"
+                  placeholder="أدخل كلمة المرور"
                   required
                   className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-300 text-black text-center text-sm focus:outline-none focus:border-[#0a1226] font-mono rounded-lg"
                 />
@@ -532,10 +518,11 @@ export default function AdminPage() {
             <button
               type="button"
               onClick={() => {
+                // The secret key lives only in the ADMIN_DEVICE_KEY env var; append it manually.
                 const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                const unlockUrl = `${origin}/admin?mac_key=yahia_mac_secure_2026`;
+                const unlockUrl = `${origin}/admin?mac_key=`;
                 navigator.clipboard.writeText(unlockUrl);
-                showToast('تم نسخ رابط الترخيص السري لجهاز الماك!');
+                showToast('تم نسخ رابط الترخيص — أضف مفتاح ADMIN_DEVICE_KEY في نهايته');
               }}
               className="px-3.5 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-[#FACC15] border border-[#FACC15]/40 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
               title="نسخ الرابط مع مفتاح الماك السري لفتحه على أي متصفح في جهازك"
@@ -1390,8 +1377,8 @@ export default function AdminPage() {
                         dir="ltr"
                         value={
                           typeof window !== 'undefined'
-                            ? `${window.location.origin}/admin?mac_key=yahia_mac_secure_2026`
-                            : '/admin?mac_key=yahia_mac_secure_2026'
+                            ? `${window.location.origin}/admin?mac_key=<ADMIN_DEVICE_KEY>`
+                            : '/admin?mac_key=<ADMIN_DEVICE_KEY>'
                         }
                         className="flex-1 p-2 bg-white border border-neutral-300 rounded font-mono text-[11px] text-neutral-800"
                       />
@@ -1399,8 +1386,8 @@ export default function AdminPage() {
                         type="button"
                         onClick={() => {
                           const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                          navigator.clipboard.writeText(`${origin}/admin?mac_key=yahia_mac_secure_2026`);
-                          showToast('تم نسخ رابط الترخيص السري!');
+                          navigator.clipboard.writeText(`${origin}/admin?mac_key=`);
+                          showToast('تم نسخ رابط الترخيص — أضف مفتاح ADMIN_DEVICE_KEY في نهايته');
                         }}
                         className="px-4 py-2 bg-black text-white hover:bg-neutral-800 rounded font-bold text-xs cursor-pointer"
                       >

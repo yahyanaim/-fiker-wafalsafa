@@ -3,6 +3,7 @@
 import React, { use, useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { notFound } from 'next/navigation';
 import { useArticles } from '@/context/ArticlesContext';
 import { Header } from '@/components/Header';
@@ -11,9 +12,13 @@ import { CategoryIcon } from '@/components/CategoryIcon';
 import { ArticleBodyRenderer } from '@/components/ArticleBodyRenderer';
 import { ArticleCard } from '@/components/ArticleCard';
 import { formatWordCountBadge } from '@/utils/arabic';
-import { QuoteCardShareModal } from '@/components/QuoteCardShareModal';
 import { isAdminUser } from '@/utils/macAuth';
-import { Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+
+const QuoteCardShareModal = dynamic(
+  () => import('@/components/QuoteCardShareModal').then((m) => m.QuoteCardShareModal),
+  { ssr: false }
+);
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -22,7 +27,7 @@ interface PageProps {
 export default function ArticlePage({ params }: PageProps) {
   const resolvedParams = use(params);
   const slug = resolvedParams.slug;
-  const { articles, categories, authors, getArticleBySlug, isLoading } = useArticles();
+  const { articles, categories, socialLinks, getArticleBySlug, isLoading } = useArticles();
   
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -32,6 +37,7 @@ export default function ArticlePage({ params }: PageProps) {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShareUrl(window.location.href);
       setIsAdmin(isAdminUser());
     }
@@ -126,7 +132,7 @@ export default function ArticlePage({ params }: PageProps) {
           <div
             className="top-section-container relative w-full pt-[65px] md:pt-[80px] lg:pt-[90px] min-h-[280px] md:min-h-[580px] lg:min-h-[660px] xl:min-h-[740px] flex flex-col justify-between overflow-hidden bg-cover bg-center"
             style={{
-              backgroundImage: `url(${article.coverImage || (article as any).cover || ''})`,
+              backgroundImage: `url(${article.coverImage || article.cover || ''})`,
             }}
           >
             {/* Subtle dark tint over image for contrast */}
@@ -427,7 +433,7 @@ export default function ArticlePage({ params }: PageProps) {
                   تواصل مع الكاتب:
                 </span>
                 <a
-                  href="https://x.com/yahia_naim"
+                  href={socialLinks.twitter}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-neutral-300 text-xs text-[#0a1226] hover:border-[#FACC15] hover:text-[#D97706] transition-colors"
@@ -438,7 +444,7 @@ export default function ArticlePage({ params }: PageProps) {
                   <span>إكس</span>
                 </a>
                 <a
-                  href="https://instagram.com/yahia_naim"
+                  href={socialLinks.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-neutral-300 text-xs text-[#0a1226] hover:border-[#FACC15] hover:text-[#D97706] transition-colors"
@@ -451,7 +457,7 @@ export default function ArticlePage({ params }: PageProps) {
                   <span>إنستجرام</span>
                 </a>
                 <a
-                  href="https://facebook.com/yahia.naim"
+                  href={socialLinks.facebook}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-neutral-300 text-xs text-[#0a1226] hover:border-[#FACC15] hover:text-[#D97706] transition-colors"
@@ -462,7 +468,7 @@ export default function ArticlePage({ params }: PageProps) {
                   <span>فيسبوك</span>
                 </a>
                 <a
-                  href="https://linkedin.com/in/yahyanaim"
+                  href={socialLinks.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-neutral-300 text-xs text-[#0a1226] hover:border-[#FACC15] hover:text-[#D97706] transition-colors"
@@ -471,7 +477,7 @@ export default function ArticlePage({ params }: PageProps) {
                   <span>لينكد إن</span>
                 </a>
                 <a
-                  href="https://github.com/yahyanaim"
+                  href={socialLinks.github}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-neutral-300 text-xs text-[#0a1226] hover:border-[#FACC15] hover:text-[#D97706] transition-colors"
@@ -479,7 +485,11 @@ export default function ArticlePage({ params }: PageProps) {
                   <span>جيت هب</span>
                 </a>
                 <a
-                  href="mailto:yahyanaim2001@gmail.com"
+                  href={
+                    socialLinks.email.startsWith('mailto:')
+                      ? socialLinks.email
+                      : `mailto:${socialLinks.email}`
+                  }
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-neutral-300 text-xs text-[#0a1226] hover:border-[#FACC15] hover:text-[#D97706] transition-colors"
                 >
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

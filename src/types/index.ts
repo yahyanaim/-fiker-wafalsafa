@@ -54,3 +54,12 @@ export interface NewsletterSubscriber {
   email: string;
   subscribedAt: string;
 }
+
+export interface SocialLinks {
+  twitter: string;
+  instagram: string;
+  facebook: string;
+  linkedin: string;
+  github: string;
+  email: string;
+}

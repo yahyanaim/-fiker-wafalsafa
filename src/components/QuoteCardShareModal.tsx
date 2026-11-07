@@ -62,6 +62,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsAdmin(isAdminUser());
     }
   }, [isOpen]);
@@ -69,7 +70,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Derive proxy safe cover image URL to avoid CORS tainting during export
-  const rawCover = article.coverImage || (article as any).cover || '';
+  const rawCover = article.coverImage || article.cover || '';
   const safeCoverImage = useMemo(() => {
     if (!rawCover) return '/file.svg';
     if (rawCover.startsWith('http://') || rawCover.startsWith('https://')) {
@@ -101,6 +102,7 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
   // Extract keywords for quick highlighting
   useEffect(() => {
     if (article.title) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDisplayText(article.title);
       setIsUsingTitle(true);
       const words = article.title
@@ -216,9 +218,9 @@ export const QuoteCardShareModal: React.FC<QuoteCardShareModalProps> = ({
       document.body.removeChild(downloadLink);
 
       showToast('تم تحميل بوستر المقال عالي الدقة (PNG) بالخط والتصميم بنجاح!');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Download error:', err);
-      showToast(err?.message || 'حدث خطأ أثناء إنشاء الصورة');
+      showToast((err instanceof Error && err.message) || 'حدث خطأ أثناء إنشاء الصورة');
     } finally {
       setIsDownloading(false);
     }

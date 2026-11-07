@@ -8,29 +8,177 @@ import { CategoryBar } from '@/components/CategoryBar';
 import { ArticleCard } from '@/components/ArticleCard';
 import { HeroFeatured } from '@/components/HeroFeatured';
 import { formatWordCountBadge } from '@/utils/arabic';
+import { useArticles } from '@/context/ArticlesContext';
 import homeData from '@/data/homeData101n.json';
 
 export default function HomePage() {
+  const { articles } = useArticles();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [copied, setCopied] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+
+  const publishedArticles = useMemo(
+    () => articles.filter((a) => a.isPublished),
+    [articles]
+  );
+
+  // Map published articles by id and slug for live lookup
+  const publishedMap = useMemo(() => {
+    const map = new Map<string, (typeof publishedArticles)[number]>();
+    publishedArticles.forEach((a) => {
+      if (a.id) map.set(String(a.id), a);
+      if (a.slug) map.set(String(a.slug), a);
+    });
+    return map;
+  }, [publishedArticles]);
+
+  // Set of original seed IDs/slugs from homeData101n.json so we can detect newly created admin articles
+  const seedKeys = useMemo(() => {
+    const keys = new Set<string>();
+    if (homeData.topTeaser) {
+      keys.add(String(homeData.topTeaser.id));
+      keys.add(String(homeData.topTeaser.slug));
+    }
+    homeData.sections.forEach((s) => {
+      if (s.banner) {
+        keys.add(String(s.banner.id));
+        keys.add(String(s.banner.slug));
+      }
+      s.posts.forEach((p) => {
+        keys.add(String(p.id));
+        keys.add(String(p.slug));
+      });
+    });
+    return keys;
+  }, []);
+
+  // Build live sections that preserve exact seed order & banners while reflecting admin edits/creations/deletions
+  const allSections = useMemo(() => {
+    return homeData.sections.map((sec) => {
+      // Newly created published articles in this category
+      const customInCat = publishedArticles
+        .filter(
+          (a) =>
+            a.categorySlug === sec.categorySlug &&
+            !seedKeys.has(String(a.id)) &&
+            !seedKeys.has(String(a.slug))
+        )
+        .map((a) => ({
+          id: a.id,
+          title: a.title,
+          author: 'يحيى نعيم',
+          cover: a.coverImage || a.cover || '',
+          brief: a.excerpt,
+          words: a.wordCount,
+          slug: a.slug,
+          categorySlug: a.categorySlug,
+          categoryName: sec.categoryName,
+        }));
+
+      // Existing seed posts updated with latest title/excerpt/cover from context (and filtered if unpublished/deleted)
+      const syncedSeedPosts = sec.posts
+        .map((p) => {
+          const live =
+            publishedMap.get(String(p.id)) || publishedMap.get(String(p.slug));
+          if (!live) return null;
+          return {
+            ...p,
+            id: live.id,
+            slug: live.slug,
+            title: live.title,
+            brief: live.excerpt || p.brief,
+            cover: live.coverImage || live.cover || p.cover,
+            words: live.wordCount || p.words,
+            categorySlug: live.categorySlug || sec.categorySlug,
+          };
+        })
+        .filter((p): p is NonNullable<typeof p> => p !== null);
+
+      const liveBannerSource = sec.banner
+        ? publishedMap.get(String(sec.banner.id)) ||
+          publishedMap.get(String(sec.banner.slug))
+        : undefined;
+
+      const syncedBanner =
+        sec.banner && liveBannerSource
+          ? {
+              ...sec.banner,
+              id: liveBannerSource.id,
+              slug: liveBannerSource.slug,
+              title: liveBannerSource.title,
+              brief: liveBannerSource.excerpt || sec.banner.brief,
+              cover:
+                liveBannerSource.coverImage ||
+                liveBannerSource.cover ||
+                sec.banner.cover,
+              words: liveBannerSource.wordCount || sec.banner.words,
+            }
+          : sec.banner;
+
+      return {
+        ...sec,
+        banner: syncedBanner,
+        posts: [...customInCat, ...syncedSeedPosts],
+      };
+    });
+  }, [publishedArticles, publishedMap, seedKeys]);
 
   // Top teaser article (Active shift or selected category)
   const topTeaser = useMemo(() => {
     if (selectedCategory !== 'all') {
-      const sec = homeData.sections.find((s) => s.categorySlug === selectedCategory);
+      const sec = allSections.find((s) => s.categorySlug === selectedCategory);
       if (sec && sec.banner) return sec.banner;
     }
-    // Default to the signature top teaser of 101n
-    return homeData.topTeaser || homeData.sections[0]?.banner;
-  }, [selectedCategory]);
+    // If admin created a new featured article, feature it at the top; otherwise use synced signature top teaser
+    const customFeatured = publishedArticles.find(
+      (a) =>
+        a.isFeatured &&
+        !seedKeys.has(String(a.id)) &&
+        !seedKeys.has(String(a.slug)) &&
+        a.id !== '1850' &&
+        a.id !== '1849'
+    );
+    if (customFeatured) {
+      return {
+        id: customFeatured.id,
+        title: customFeatured.title,
+        author: 'يحيى نعيم',
+        cover: customFeatured.coverImage || customFeatured.cover || '',
+        brief: customFeatured.excerpt,
+        words: customFeatured.wordCount,
+        slug: customFeatured.slug,
+        categorySlug: customFeatured.categorySlug,
+        categoryName: 'فلسفة',
+      };
+    }
+
+    if (homeData.topTeaser) {
+      const liveTop =
+        publishedMap.get(String(homeData.topTeaser.id)) ||
+        publishedMap.get(String(homeData.topTeaser.slug));
+      if (liveTop) {
+        return {
+          ...homeData.topTeaser,
+          id: liveTop.id,
+          slug: liveTop.slug,
+          title: liveTop.title,
+          brief: liveTop.excerpt || homeData.topTeaser.brief,
+          cover:
+            liveTop.coverImage || liveTop.cover || homeData.topTeaser.cover,
+          words: liveTop.wordCount || homeData.topTeaser.words,
+        };
+      }
+    }
+    return homeData.topTeaser || allSections[0]?.banner;
+  }, [selectedCategory, allSections, publishedArticles, publishedMap, seedKeys]);
 
   // Sections to display
   const activeSections = useMemo(() => {
     if (selectedCategory !== 'all') {
-      return homeData.sections.filter((s) => s.categorySlug === selectedCategory);
+      return allSections.filter((s) => s.categorySlug === selectedCategory);
     }
-    return homeData.sections;
-  }, [selectedCategory]);
+    return allSections;
+  }, [selectedCategory, allSections]);
 
   const handleShareTopTeaser = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -141,6 +289,10 @@ export default function HomePage() {
                   </button>
 
                   <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsBookmarked((prev) => !prev);
+                    }}
                     className="p-1 text-white hover:text-[#FACC15] transition-colors cursor-pointer"
                     title="حفظ المقال"
                     aria-label="حفظ المقال"
@@ -149,7 +301,7 @@ export default function HomePage() {
                       viewBox="0 0 6.98 10.18"
                       width="12"
                       height="16"
-                      fill="none"
+                      fill={isBookmarked ? '#FACC15' : 'none'}
                       stroke="currentColor"
                       strokeWidth="1.1"
                     >

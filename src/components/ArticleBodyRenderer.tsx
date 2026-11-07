@@ -124,8 +124,8 @@ export const ArticleBodyRenderer: React.FC<ArticleBodyRendererProps> = ({ conten
  * Note: Never use font-serif on Arabic strong tags to preserve typographic harmony!
  */
 function formatInlineText(text: string): React.ReactNode {
-  // Regex to split tokens for **bold** and *italic*
-  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  // Regex to split tokens for **bold**, *italic*, and [label](url)
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g);
 
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
@@ -141,6 +141,29 @@ function formatInlineText(text: string): React.ReactNode {
           {part.slice(1, -1)}
         </em>
       );
+    }
+    const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (linkMatch) {
+      const [, label, rawHref] = linkMatch;
+      const href = rawHref.trim();
+      const isSafe =
+        href.startsWith('https://') ||
+        href.startsWith('http://') ||
+        href.startsWith('/') ||
+        href.startsWith('mailto:');
+      if (isSafe) {
+        return (
+          <a
+            key={index}
+            href={href}
+            target={href.startsWith('http') ? '_blank' : undefined}
+            rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+            className="underline decoration-[#FACC15] decoration-2 underline-offset-4 hover:text-[#D97706] transition-colors"
+          >
+            {label}
+          </a>
+        );
+      }
     }
     return part;
   });

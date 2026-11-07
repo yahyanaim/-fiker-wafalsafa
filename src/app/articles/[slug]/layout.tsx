@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { initialArticles } from '@/data/initialArticles';
+import { readPlatformStore } from '@/lib/serverStore';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,8 +15,22 @@ export async function generateMetadata({
   const { slug } = await params;
   const decodedSlug = decodeURIComponent(slug);
 
-  const article = initialArticles.find(
-    (a) => a.slug === decodedSlug || a.slug === slug
+  let articles = initialArticles;
+  try {
+    const store = await readPlatformStore();
+    if (store.articles.length > 0) {
+      articles = store.articles;
+    }
+  } catch {
+    // fallback to initialArticles
+  }
+
+  const article = articles.find(
+    (a) =>
+      a.slug === decodedSlug ||
+      a.slug === slug ||
+      a.id === decodedSlug ||
+      a.id === slug
   );
 
   if (!article) {

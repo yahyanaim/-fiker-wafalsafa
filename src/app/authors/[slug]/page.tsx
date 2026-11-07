@@ -14,12 +14,11 @@ interface PageProps {
 }
 
 export default function AuthorProfilePage({ params }: PageProps) {
-  const resolvedParams = use(params);
-  const slug = resolvedParams.slug;
-  const { articles, isLoading } = useArticles();
+  use(params);
+  const { articles, authors, isLoading } = useArticles();
 
-  // Sole author: Yahia Naim
-  const author = YAHIA_NAIM_AUTHOR;
+  // Sole author: Yahia Naim (hydrated with live social links from context)
+  const author = authors[0] || YAHIA_NAIM_AUTHOR;
 
   if (isLoading) {
     return (

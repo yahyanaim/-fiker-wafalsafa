@@ -1,107 +1,72 @@
-// Mac Device Authorization Utility for Yahia Naim (Admin Panel Protection)
+// Client-side admin helpers for Yahia Naim's admin panel.
+//
+// SECURITY NOTE: The real checks happen on the server (see src/lib/adminAuth.ts
+// and /api/admin/*). The values below are only UI hints (e.g. whether to show
+// admin-only buttons) and never grant access by themselves.
 
-export const MAC_AUTH_KEY = 'fiker_authorized_mac_device';
-export const MAC_AUTH_SECRET_TOKEN = 'authorized_mac_yahia_2026';
-export const MAC_UNLOCK_PARAM = 'mac_key';
+const ADMIN_HINT_KEY = 'fiker_admin_authenticated';
 
-/**
- * Checks whether the current visitor is on Yahia's Mac or authorized device.
- * Returns true if:
- * 1. Running on localhost / 127.0.0.1 (directly on user's Mac dev machine).
- * 2. Or the Mac device secret token exists in localStorage.
- * 3. Or URL contains the secret unlock key (?mac_key=yahia_mac_2026).
- */
-export function isUserMacAuthorized(): boolean {
-  if (typeof window === 'undefined') return false;
+export interface AdminStatus {
+  deviceAuthorized: boolean;
+  authenticated: boolean;
+}
 
-  // 1. Localhost check: running directly on Mac
-  const hostname = window.location.hostname;
-  if (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname.endsWith('.local')
-  ) {
-    // Automatically persist authorization for this browser on his Mac
-    try {
-      localStorage.setItem(MAC_AUTH_KEY, MAC_AUTH_SECRET_TOKEN);
-    } catch {
-      // ignore
-    }
-    return true;
-  }
-
-  // 2. Secret URL parameter unlock on Mac browser
+/** Asks the server whether this browser is an authorized device / logged-in admin. */
+export async function fetchAdminStatus(): Promise<AdminStatus> {
   try {
-    const urlParams = new URLSearchParams(window.location.search);
-    const key = urlParams.get(MAC_UNLOCK_PARAM);
-    if (
-      key === 'yahia_mac_2026' ||
-      key === 'yahia_mac_secure_2026' ||
-      key === 'mac_yahia'
-    ) {
-      localStorage.setItem(MAC_AUTH_KEY, MAC_AUTH_SECRET_TOKEN);
-      return true;
-    }
+    const search = typeof window !== 'undefined' ? window.location.search : '';
+    const macKey = new URLSearchParams(search).get('mac_key');
+    const url = macKey ? `/api/admin/session?mac_key=${encodeURIComponent(macKey)}` : '/api/admin/session';
+    const res = await fetch(url, { cache: 'no-store', credentials: 'same-origin' });
+    if (!res.ok) return { deviceAuthorized: false, authenticated: false };
+    const data = (await res.json()) as AdminStatus;
+    setAdminHint(data.authenticated);
+    return data;
   } catch {
-    // ignore
+    return { deviceAuthorized: false, authenticated: false };
   }
+}
 
-  // 3. Stored authorization token in localStorage
+export async function loginAdmin(passcode: string): Promise<boolean> {
   try {
-    const saved = localStorage.getItem(MAC_AUTH_KEY);
-    if (
-      saved === MAC_AUTH_SECRET_TOKEN ||
-      saved === 'authorized_mac_yahia' ||
-      saved === 'true'
-    ) {
-      return true;
-    }
-  } catch {
-    // ignore
-  }
-
-  return false;
-}
-
-/**
- * Manually authorizes the current device/browser.
- */
-export function authorizeCurrentMac(): void {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(MAC_AUTH_KEY, MAC_AUTH_SECRET_TOKEN);
-    } catch {
-      // ignore
-    }
-  }
-}
-
-/**
- * Revokes authorization on this device.
- */
-export function revokeMacAuthorization(): void {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.removeItem(MAC_AUTH_KEY);
-      localStorage.removeItem('fiker_admin_authenticated');
-    } catch {
-      // ignore
-    }
-  }
-}
-
-/**
- * Checks whether the current user is an authenticated administrator.
- * Returns true if authenticated via passcode or on an authorized admin device.
- */
-export function isAdminUser(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    const isAuth = localStorage.getItem('fiker_admin_authenticated') === 'true';
-    const isMacAuth = isUserMacAuthorized();
-    return isAuth || isMacAuth;
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ passcode }),
+    });
+    setAdminHint(res.ok);
+    return res.ok;
   } catch {
     return false;
   }
 }
 
+export async function logoutAdmin(): Promise<void> {
+  setAdminHint(false);
+  try {
+    await fetch('/api/admin/login', { method: 'DELETE', credentials: 'same-origin' });
+  } catch {
+    // ignore
+  }
+}
+
+function setAdminHint(value: boolean) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (value) localStorage.setItem(ADMIN_HINT_KEY, 'true');
+    else localStorage.removeItem(ADMIN_HINT_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/** UI hint only: true if this browser previously logged in successfully. */
+export function isAdminUser(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(ADMIN_HINT_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}

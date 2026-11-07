@@ -23,14 +23,14 @@
 }
 @font-face {
   font-family: 'Arslan Wessam A';
-  src: url('/fonts/ArslanWessamA.woff2') format('woff2');
+  src: url('/fonts/(A)%20Arslan%20Wessam%20A%20(A)%20Arslan%20Wessam%20A.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: '(A) Arslan Wessam A (A) Arslan Wessam A';
-  src: url('/fonts/ArslanWessamA.woff2') format('woff2');
+  src: url('/fonts/(A)%20Arslan%20Wessam%20A%20(A)%20Arslan%20Wessam%20A.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;

@@ -1,27 +1,42 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Article, Author, Category, NewsletterSubscriber } from '@/types';
+import { Article, Author, Category, NewsletterSubscriber, SocialLinks } from '@/types';
 import { categories } from '@/data/categories';
-import { authors as initialAuthors } from '@/data/authors';
 import { initialArticles } from '@/data/initialArticles';
 import { countArabicWords, calculateReadingTime } from '@/utils/arabic';
+
+export const DEFAULT_SOCIAL_LINKS: SocialLinks = {
+  twitter: 'https://x.com/yahia_naim',
+  instagram: 'https://instagram.com/yahia_naim',
+  facebook: 'https://facebook.com/yahia.naim',
+  linkedin: 'https://linkedin.com/in/yahyanaim',
+  github: 'https://github.com/yahyanaim',
+  email: 'yahyanaim2001@gmail.com',
+};
 
 interface ArticlesContextType {
   articles: Article[];
   categories: Category[];
   authors: Author[];
   newsletterSubscribers: NewsletterSubscriber[];
+  socialLinks: SocialLinks;
   isLoading: boolean;
   getArticleById: (id: string) => Article | undefined;
   getArticleBySlug: (slug: string) => Article | undefined;
   getArticlesByCategory: (categorySlug: string) => Article[];
   getArticlesByAuthor: (authorId: string) => Article[];
   getFeaturedArticle: () => Article | undefined;
-  createArticle: (newArticle: Omit<Article, 'id' | 'publishDate' | 'isoDate' | 'wordCount' | 'readingTimeMinutes' | 'slug'> & { id?: string; slug?: string }) => Article;
+  createArticle: (
+    newArticle: Omit<
+      Article,
+      'id' | 'publishDate' | 'isoDate' | 'wordCount' | 'readingTimeMinutes' | 'slug'
+    > & { id?: string; slug?: string }
+  ) => Article;
   updateArticle: (id: string, updatedFields: Partial<Article>) => void;
   deleteArticle: (id: string) => void;
   toggleArticlePublish: (id: string) => void;
+  updateSocialLinks: (links: SocialLinks) => void;
   subscribeNewsletter: (email: string) => { success: boolean; message: string };
   resetToSeedData: () => void;
 }
@@ -48,17 +63,59 @@ export const YAHIA_NAIM_AUTHOR: Author = {
 const ARTICLES_STORAGE_KEY = 'fiker_articles_v6';
 const AUTHORS_STORAGE_KEY = 'fiker_authors_v6';
 const NEWSLETTER_STORAGE_KEY = 'fiker_newsletter_v6';
+const SOCIAL_LINKS_STORAGE_KEY = 'fiker_yahia_social_links';
+
+function sanitizeArticlesList(list: Article[]): Article[] {
+  const initialMap = new Map<string, Article>();
+  initialArticles.forEach((initArt) => {
+    if (initArt.id) initialMap.set(String(initArt.id).toLowerCase(), initArt);
+    if (initArt.slug) initialMap.set(String(initArt.slug).toLowerCase(), initArt);
+  });
+
+  const sanitized = list.map((a: Article) => {
+    const matched =
+      initialMap.get(String(a.id || '').toLowerCase()) ||
+      (a.slug ? initialMap.get(String(a.slug).toLowerCase()) : undefined);
+    const coverImage =
+      a.coverImage ||
+      a.cover ||
+      matched?.coverImage ||
+      matched?.cover ||
+      '';
+    return {
+      ...a,
+      coverImage,
+      cover: coverImage,
+      authorId: 'author-yahia-naim',
+      author: 'يحيى نعيم',
+      authorSlug: 'yahia-naim',
+    };
+  });
+
+  const existingIds = new Set(sanitized.map((a: Article) => a.id));
+  const missing = initialArticles
+    .filter((a) => !existingIds.has(a.id))
+    .map((a) => ({
+      ...a,
+      cover: a.coverImage,
+      authorId: 'author-yahia-naim',
+      author: 'يحيى نعيم',
+      authorSlug: 'yahia-naim',
+    }));
+  return [...sanitized, ...missing];
+}
 
 export function ArticlesProvider({ children }: { children: ReactNode }) {
   const [articles, setArticles] = useState<Article[]>(initialArticles);
   const [authors, setAuthors] = useState<Author[]>([YAHIA_NAIM_AUTHOR]);
   const [newsletterSubscribers, setNewsletterSubscribers] = useState<NewsletterSubscriber[]>([]);
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>(DEFAULT_SOCIAL_LINKS);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize from LocalStorage and guarantee authentic artwork and author
+  // Initialize from LocalStorage first for instant render, then hydrate from /api/store
   useEffect(() => {
+    let cancelled = false;
     try {
-      // Purge old legacy keys that might contain obsolete cached data
       const legacyKeys = [
         'fiker_articles_v1', 'fiker_authors_v1', 'fiker_newsletter_v1',
         'fiker_articles_v2', 'fiker_authors_v2',
@@ -74,52 +131,15 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
         }
       });
 
-      // Always guarantee Yahia Naim as the sole platform author
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAuthors([YAHIA_NAIM_AUTHOR]);
       localStorage.setItem(AUTHORS_STORAGE_KEY, JSON.stringify([YAHIA_NAIM_AUTHOR]));
 
       const storedArticles = localStorage.getItem(ARTICLES_STORAGE_KEY);
       if (storedArticles) {
         try {
-          const parsed = JSON.parse(storedArticles);
-          const initialMap = new Map<string, Article>();
-          initialArticles.forEach((initArt) => {
-            if (initArt.id) initialMap.set(String(initArt.id).toLowerCase(), initArt);
-            if (initArt.slug) initialMap.set(String(initArt.slug).toLowerCase(), initArt);
-          });
-
-          // Sanitize every article so authorId is strictly Yahia Naim and authentic artwork is preserved
-          const sanitized = parsed.map((a: Article) => {
-            const matched =
-              initialMap.get(String(a.id || '').toLowerCase()) ||
-              (a.slug ? initialMap.get(String(a.slug).toLowerCase()) : undefined);
-            const coverImage =
-              matched?.coverImage ||
-              (matched as any)?.cover ||
-              a.coverImage ||
-              (a as any).cover ||
-              '';
-            return {
-              ...a,
-              coverImage,
-              cover: coverImage,
-              authorId: 'author-yahia-naim',
-              author: 'يحيى نعيم',
-              authorSlug: 'yahia-naim',
-            };
-          });
-
-          const existingIds = new Set(sanitized.map((a: Article) => a.id));
-          const missing = initialArticles
-            .filter((a) => !existingIds.has(a.id))
-            .map((a) => ({
-              ...a,
-              cover: a.coverImage,
-              authorId: 'author-yahia-naim',
-              author: 'يحيى نعيم',
-              authorSlug: 'yahia-naim',
-            }));
-          const merged = [...sanitized, ...missing];
+          const parsed = JSON.parse(storedArticles) as Article[];
+          const merged = sanitizeArticlesList(parsed);
           setArticles(merged);
           localStorage.setItem(ARTICLES_STORAGE_KEY, JSON.stringify(merged));
         } catch {
@@ -134,14 +154,59 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
       if (storedNewsletter) {
         setNewsletterSubscribers(JSON.parse(storedNewsletter));
       }
+
+      const storedSocial = localStorage.getItem(SOCIAL_LINKS_STORAGE_KEY);
+      if (storedSocial) {
+        setSocialLinks({ ...DEFAULT_SOCIAL_LINKS, ...JSON.parse(storedSocial) });
+      }
     } catch (e) {
       console.error('Failed to load data from localStorage:', e);
     } finally {
       setIsLoading(false);
     }
+
+    // Fetch canonical server state so all visitors see published articles and social links
+    fetch('/api/store', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((serverData) => {
+        if (cancelled || !serverData) return;
+        if (Array.isArray(serverData.articles) && serverData.articles.length > 0) {
+          const sanitized = sanitizeArticlesList(serverData.articles);
+          setArticles(sanitized);
+          try {
+            localStorage.setItem(ARTICLES_STORAGE_KEY, JSON.stringify(sanitized));
+          } catch {
+            // ignore
+          }
+        }
+        if (Array.isArray(serverData.newsletterSubscribers) && serverData.newsletterSubscribers.length > 0) {
+          setNewsletterSubscribers(serverData.newsletterSubscribers);
+          try {
+            localStorage.setItem(NEWSLETTER_STORAGE_KEY, JSON.stringify(serverData.newsletterSubscribers));
+          } catch {
+            // ignore
+          }
+        }
+        if (serverData.socialLinks) {
+          const mergedLinks = { ...DEFAULT_SOCIAL_LINKS, ...serverData.socialLinks };
+          setSocialLinks(mergedLinks);
+          try {
+            localStorage.setItem(SOCIAL_LINKS_STORAGE_KEY, JSON.stringify(mergedLinks));
+          } catch {
+            // ignore
+          }
+        }
+      })
+      .catch(() => {
+        // Offline or local-only fallback
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Save to LocalStorage whenever articles change
+  // Save to LocalStorage and sync to server store
   const saveArticles = (newArticles: Article[]) => {
     setArticles(newArticles);
     try {
@@ -149,6 +214,31 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.error('Failed to save articles to localStorage', e);
     }
+    fetch('/api/store', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ action: 'sync_articles', articles: newArticles }),
+    }).catch(() => {
+      // ignore offline
+    });
+  };
+
+  const updateSocialLinks = (links: SocialLinks) => {
+    setSocialLinks(links);
+    try {
+      localStorage.setItem(SOCIAL_LINKS_STORAGE_KEY, JSON.stringify(links));
+    } catch {
+      // ignore
+    }
+    fetch('/api/store', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ action: 'sync_social', socialLinks: links }),
+    }).catch(() => {
+      // ignore
+    });
   };
 
   const getArticleById = (id: string): Article | undefined => {
@@ -189,7 +279,7 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
     return articles.filter((a) => a.isPublished && a.categorySlug === categorySlug);
   };
 
-  const getArticlesByAuthor = (_authorId: string): Article[] => {
+  const getArticlesByAuthor = (): Article[] => {
     return articles.filter((a) => a.isPublished);
   };
 
@@ -199,13 +289,15 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
   };
 
   const createArticle = (
-    newArticleData: Omit<Article, 'id' | 'publishDate' | 'isoDate' | 'wordCount' | 'readingTimeMinutes' | 'slug'> & { id?: string; slug?: string }
+    newArticleData: Omit<
+      Article,
+      'id' | 'publishDate' | 'isoDate' | 'wordCount' | 'readingTimeMinutes' | 'slug'
+    > & { id?: string; slug?: string }
   ): Article => {
     const id = newArticleData.id || `art-${Date.now()}`;
     const wordCount = countArabicWords(newArticleData.body);
     const readingTime = calculateReadingTime(wordCount);
-    
-    // Arabic formatted date
+
     const now = new Date();
     const arabicMonths = [
       'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
@@ -214,16 +306,20 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
     const publishDate = `${now.getDate()} ${arabicMonths[now.getMonth()]} ${now.getFullYear()}`;
     const isoDate = now.toISOString().split('T')[0];
 
-    const slug = newArticleData.slug || newArticleData.title
-      .trim()
-      .toLowerCase()
-      .replace(/[^\u0621-\u064A0-9a-zA-Z]+/g, '-')
-      .replace(/^-|-$/g, '') || `essay-${id}`;
+    const slug =
+      newArticleData.slug ||
+      newArticleData.title
+        .trim()
+        .toLowerCase()
+        .replace(/[^\u0621-\u064A0-9a-zA-Z]+/g, '-')
+        .replace(/^-|-$/g, '') ||
+      `essay-${id}`;
 
     const createdArticle: Article = {
       ...newArticleData,
       id,
       slug,
+      cover: newArticleData.coverImage,
       wordCount,
       readingTimeMinutes: readingTime,
       publishDate,
@@ -244,9 +340,12 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
         const body = updatedFields.body !== undefined ? updatedFields.body : art.body;
         const wordCount = countArabicWords(body);
         const readingTime = calculateReadingTime(wordCount);
+        const coverImage = updatedFields.coverImage ?? art.coverImage;
         return {
           ...art,
           ...updatedFields,
+          coverImage,
+          cover: coverImage,
           wordCount,
           readingTimeMinutes: readingTime,
         };
@@ -297,7 +396,18 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
       console.error(e);
     }
 
-    return { success: true, message: 'أهلاً بك في فكر وفلسفة! تم تسجيلك بنجاح في نشرة التأملات الأسبوعية.' };
+    fetch('/api/store', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'subscribe', email: trimmed }),
+    }).catch(() => {
+      // ignore
+    });
+
+    return {
+      success: true,
+      message: 'أهلاً بك في فكر وفلسفة! تم تسجيلك بنجاح في نشرة التأملات الأسبوعية.',
+    };
   };
 
   const resetToSeedData = () => {
@@ -308,9 +418,30 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
       setArticles(initialArticles);
       setAuthors([YAHIA_NAIM_AUTHOR]);
       setNewsletterSubscribers([]);
+      fetch('/api/store', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ action: 'reset' }),
+      }).catch(() => {
+        // ignore
+      });
     } catch (e) {
       console.error(e);
     }
+  };
+
+  // Merge dynamic socialLinks onto the author object so consumers reading `authors[0]` get live links
+  const liveAuthor: Author = {
+    ...YAHIA_NAIM_AUTHOR,
+    twitter: socialLinks.twitter,
+    instagram: socialLinks.instagram,
+    facebook: socialLinks.facebook,
+    linkedin: socialLinks.linkedin,
+    github: socialLinks.github,
+    email: socialLinks.email.startsWith('mailto:')
+      ? socialLinks.email
+      : `mailto:${socialLinks.email}`,
   };
 
   return (
@@ -318,8 +449,9 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
       value={{
         articles,
         categories,
-        authors,
+        authors: authors.length > 0 ? [liveAuthor] : [liveAuthor],
         newsletterSubscribers,
+        socialLinks,
         isLoading,
         getArticleById,
         getArticleBySlug,
@@ -330,6 +462,7 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
         updateArticle,
         deleteArticle,
         toggleArticlePublish,
+        updateSocialLinks,
         subscribeNewsletter,
         resetToSeedData,
       }}
